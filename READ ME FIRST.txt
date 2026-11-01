@@ -1,9 +1,45 @@
 =====================================================================
-  WHISKER BAY  -  Python edition, version 1.7.0
+  WHISKER BAY  -  Python edition, version 1.10.0
   A cat, a boat, and a chain of islands full of fish that really
   don't want to be caught. A real program, with online multiplayer that you
   and your friends host yourselves.
 =====================================================================
+
+---------------------------------------------------------------------
+ NEW IN 1.10.0: THE PRESENTATION UPDATE
+---------------------------------------------------------------------
+
+ - Refined menus and shared controls, with clearer focus, hover, pressed,
+   selected, and equipped states throughout the game.
+ - Fishing instructions now use a readable adaptive hint panel, and
+   compact HUD actions reveal their labels when hovered.
+ - Gameplay and fishing balance are unchanged.
+
+---------------------------------------------------------------------
+ NEW IN 1.9.0: SHARED FISH POPULATIONS
+---------------------------------------------------------------------
+
+ - Anglers on the same island see the same server-backed fish, Mythics,
+   limited targets and boss targets. Fish movement is synchronized.
+ - The first angler to hook a shared fish owns that encounter. Catches,
+   escapes and disconnects are reflected for everyone.
+ - Cave chamber networks are generated per server, connected by tunnels,
+   and shared with cave-only fish.
+ - Multiplayer protocol 8 requires the host and every player to use
+   the same 1.9.0 build.
+
+---------------------------------------------------------------------
+ NEW IN 1.8.0: CASTING & LINE PHYSICS
+---------------------------------------------------------------------
+
+ - The line follows the hook during the cast instead of snapping back
+   to the resting position while the hook is above water.
+ - Line slack now responds to hook movement and reel tension.
+ - Fish build line tension 50% faster while outside the reel bar.
+ - Shared Mythic and boss claims sync your hook state immediately,
+   preventing false "already hooked" denials.
+ - Fixed an online startup crash involving mutation-upgrade data.
+ - The host server and every player need the same 1.8.0 game build.
 
 ---------------------------------------------------------------------
  NEW IN 1.7.0: THE BIG FISHING & POLISH UPDATE

@@ -429,11 +429,12 @@ def card(c, rect, ic, title, desc='', stats=None, buttons=(), equip=False, locke
     """A shop / bag card. ic: (icon name, colour) or a Surface. buttons: [(label, style, disabled, fn)]."""
     r = pygame.Rect(rect)
     a = 0.55 if locked else 1.0
-    box(c, r, (20, 58, 95, 140), SEA if equip else (43, 90, 132, 204), 14, 2 if equip else 1, alpha=a)
-    pygame.draw.line(c, (96, 174, 208) if equip else (50, 91, 125),
+    box(c, (r.x, r.y + 3, r.w, r.h), (1, 10, 23, 100), None, 14, alpha=a)
+    box(c, r, (14, 44, 70, 224), SEA if equip else (61, 108, 139, 190), 14, 2 if equip else 1, alpha=a)
+    pygame.draw.line(c, (130, 236, 220) if equip else (91, 143, 171),
                      (r.x + 16, r.y + 2), (r.right - 16, r.y + 2), 1)
     ib = pygame.Rect(r.x + 12, r.y + 12, 56, 56)
-    box(c, ib, (7, 26, 46, 166), None, 12, alpha=a)
+    box(c, ib, (5, 23, 40, 205), (255, 255, 255, 22), 12, alpha=a)
     if isinstance(ic, pygame.Surface):
         c.blit(ic, ic.get_rect(center=ib.center))
     elif ic:
@@ -523,14 +524,16 @@ def _draw_panel(c, dt):
     PW, PH = min(940, W - 20), min(660, H - 20)
     px, py = (W - PW) // 2, (H - PH) // 2
     pr = pygame.Rect(px, py, PW, PH)
-    box(c, pr, None, LINE, 20, 1, grad=(PANEL, NIGHT))
+    box(c, (px + 3, py + 7, PW, PH), (0, 7, 18, 175), None, 22)
+    box(c, pr, None, (102, 160, 194), 20, 1, grad=((18, 52, 81), NIGHT))
     if UI.click and not pr.collidepoint(UI.click) and not UI.consumed:
         UI.consumed = True
         close_panel()
         return
     Wd.refreshStats()
     sub = panel_sub(pn)
-    tr = text(c, panel_title(pn.kind), px + 18, py + 14, 'd', 26, SAND)
+    box(c, (px + 18, py + 19, 4, 25), SEA, None, 2)
+    tr = text(c, panel_title(pn.kind), px + 31, py + 12, 'd', 26, SAND)
     if sub:
         text(c, sub, tr.right + 14, py + 24, 'k', 13, MIST)
     if button(c, (pr.right - 52, py + 12, 38, 38), '', '', radius=12):
@@ -1671,7 +1674,8 @@ def panel_players(c, body, y, dt):
 # ===================================================================================
 def chip(c, x, y, label, col=FOAM, w=None):
     w = w or text_w(label, 'x', 14) + 26
-    box(c, (x, y, w, 32), (7, 26, 46, 184), (234, 246, 255, 41), 16)
+    box(c, (x, y + 2, w, 32), (0, 8, 20, 100), None, 16)
+    box(c, (x, y, w, 32), (7, 26, 46, 218), (130, 194, 220, 64), 16)
     text(c, label, x + w / 2, y + 16, 'x', 14, col, 'center', 'middle')
     UI.block((x, y, w, 32))
     return x + w + 8
@@ -1705,8 +1709,9 @@ def draw_hud(c, dt):
             n = len(online.visible_peers())
             lab = f'Online · {n} here' if n else 'Online'
             xw = text_w(lab, 'x', 14) + 40
-            box(c, (x, y, xw, 32), (7, 26, 46, 184), (47, 211, 192, 120), 16)
-            gfxdraw.filled_circle(c, x + 16, y + 16, 5, SEA)
+            box(c, (x, y, xw, 32), (7, 26, 46, 225), (47, 211, 192, 150), 16)
+            gfxdraw.filled_circle(c, x + 16, y + 16, 7, (20, 103, 99))
+            gfxdraw.filled_circle(c, x + 16, y + 16, 4, SEA)
             text(c, lab, x + 27, y + 16, 'x', 14, FOAM, 'left', 'middle')
             x += xw + 8
         else:
@@ -1737,6 +1742,7 @@ def draw_hud(c, dt):
                 widths[i] = 40
     waiting = bool(Wd.questsWaiting())
     rx = W - 12 - 40
+    hovered_action = None
     sound_r = pygame.Rect(rx, y, 40, 36)
     if button(c, sound_r, '', 'hud', radius=14):
         Sfx.set_muted(not Sfx.muted)
@@ -1754,10 +1760,20 @@ def draw_hud(c, dt):
             text(c, lab, r.x + 33, r.centery, 'x', 14, FOAM, 'left', 'middle')
         else:
             icon(c, ic, r.centerx, r.centery, 0.95)
+            if UI.over(r):
+                hovered_action = (r, lab)
         if kind == 'quests' and waiting:
             gfxdraw.filled_circle(c, r.right - 4, r.y + 4, 6, DANGER)
             gfxdraw.aacircle(c, r.right - 4, r.y + 4, 6, (255, 255, 255))
         rx -= 6
+    if hovered_action:
+        anchor, label = hovered_action
+        tip_w = min(W - 24, text_w(label, 'k', 12) + 22)
+        tip_x = clamp(anchor.centerx - tip_w / 2, 12, W - tip_w - 12)
+        tip_y = anchor.bottom + 5
+        box(c, (tip_x, tip_y + 2, tip_w, 25), (0, 7, 18, 130), None, 9)
+        box(c, (tip_x, tip_y, tip_w, 25), (8, 31, 52, 245), (130, 194, 220, 100), 9)
+        text(c, label, tip_x + tip_w / 2, tip_y + 12, 'k', 12, FOAM, 'center', 'middle')
     # bait chip
     b = BAIT.get(p.bait) if p.bait else None
     n = (p.baits.get(p.bait) or 0) if b else 0
@@ -1796,7 +1812,15 @@ def hint_text():
 def draw_hint(c):
     h = hint_text()
     if h and not S.panel:
-        text(c, h, G.W / 2, G.H - 30, 'x', 14, FOAM, 'center', 'middle', outline=2, ocol=(0, 0, 0, 170))
+        lines = wrap(h, 'x', 13, min(G.W - 72, 900))
+        line_h = 18
+        width = min(G.W - 36, max(text_w(line, 'x', 13) for line in lines) + 32)
+        height = len(lines) * line_h + 14
+        x, y = (G.W - width) / 2, G.H - height - 12
+        box(c, (x, y + 2, width, height), (0, 8, 20, 120), None, 14)
+        box(c, (x, y, width, height), (6, 25, 43, 222), (113, 169, 197, 90), 14)
+        for i, line in enumerate(lines):
+            text(c, line, G.W / 2, y + 7 + i * line_h, 'x', 13, FOAM, 'center', 'middle')
 
 
 def draw_toasts(c):
@@ -1810,7 +1834,8 @@ def draw_toasts(c):
         border = {'good': SEA, 'bad': DANGER, 'gold': SAND}.get(ts.kind, LINE)
         col = {'bad': (255, 208, 216), 'gold': SAND}.get(ts.kind, FOAM)
         yy = y - (1 - min(1.0, ts.t / 0.25)) * 8
-        box(c, (G.W / 2 - w / 2, yy, w, h), (7, 26, 46, 235), border, 12, alpha=a)
+        box(c, (G.W / 2 - w / 2, yy + 2, w, h), (0, 8, 20, 110), None, 12, alpha=a)
+        box(c, (G.W / 2 - w / 2, yy, w, h), (7, 26, 46, 242), border, 12, alpha=a)
         for i, ln in enumerate(lines):
             text(c, ln, G.W / 2, yy + 7 + i * 19, 'x', 14, col, 'center', alpha=a)
         y += h + 6
@@ -1940,9 +1965,14 @@ def draw_patch_notes(c):
 def draw_title(c, dt):
     W, H = G.W, G.H
     c.blit(title_veil(), (0, 0))
-    ts = _cache.get('title')
+    hero = pygame.Rect(max(18, (W - 900) // 2), 8, min(900, W - 36), 150)
+    box(c, (hero.x, hero.y + 5, hero.w, hero.h), (0, 7, 18, 75), None, 28)
+    box(c, hero, (8, 31, 52, 92), (255, 255, 255, 22), 28, 1)
+    title_size = max(52, min(92, int(min(W * 0.072, H * 0.128))))
+    cache_key = f'title-{title_size}'
+    ts = _cache.get(cache_key)
     if ts is None:
-        f = ui.font('d', 92)
+        f = ui.font('d', title_size)
         t1 = f.render('Whisker Bay', True, SAND)
         sh = f.render('Whisker Bay', True, hexc('#a3561c'))
         from .art import _blur
@@ -1954,9 +1984,11 @@ def draw_title(c, dt):
         ts.blit(dark, (0, 0))
         ts.blit(sh, (30, 26))
         ts.blit(t1, (30, 20))
-        _cache['title'] = ts
-    c.blit(ts, (W / 2 - ts.get_width() / 2, 2))
-    text(c, "A cat, a boat, and four islands of fish that really don't want to be caught.", W / 2, 140, 'x', 16, FOAM, 'center', outline=2, ocol=(0, 0, 0, 140))
+        _cache[cache_key] = ts
+    title_y = max(0, 8 + (76 - title_size) // 3)
+    c.blit(ts, (W / 2 - ts.get_width() / 2, title_y))
+    pygame.draw.line(c, (47, 211, 192, 120), (W * 0.31, 119), (W * 0.69, 119), 1)
+    text(c, "A cat, a boat, and a bay full of fish that really don't want to be caught.", W / 2, 130, 'x', 15, FOAM, 'center', outline=2, ocol=(0, 0, 0, 140))
     from . import __version__
     if not S.patch_notes and SET.get('seenPatchNotes') != __version__:
         S.patch_notes = True
@@ -1971,12 +2003,14 @@ def draw_title(c, dt):
         return
     tabs = [('local', 'Play on this computer'), ('online', 'Play online with friends')]
     tw = sum(text_w(l, 'k', 15) + 28 for _, l in tabs) + 6
-    t = ui.tabs(c, W / 2 - tw / 2, 178, tabs, S.title_tab, size=15)
+    tab_y = max(166, int(H * 0.247))
+    t = ui.tabs(c, W / 2 - tw / 2, tab_y, tabs, S.title_tab, size=15)
     if t and t != S.title_tab:
         S.title_tab = t
         UI.focus = None
     pw = 620
-    area = pygame.Rect(W / 2 - pw / 2, 224, pw, H - 240)
+    area_y = tab_y + 46
+    area = pygame.Rect(W / 2 - pw / 2, area_y, pw, max(180, H - area_y - 16))
     if S.title_tab == 'local' and online.st.phase in ('off',):
         title_local(c, area)
     else:

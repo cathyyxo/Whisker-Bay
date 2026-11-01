@@ -1,0 +1,23 @@
+WHISKER BAY 1.9.0 - SHARED FISH POPULATIONS
+
+SHARED FISHING
+- Ordinary fish populations, Mythics, limited fish, and bosses are now
+  server-backed and shared for anglers on the same island.
+- Shared fish include the same species, weight, mutation, depth, position,
+  and synchronized movement.
+- The first angler to hook a shared fish owns that encounter. If they catch
+  it, lose it, or disconnect, the population is updated for everyone.
+- Fish are streamed in depth-based chunks to support players at different
+  depths. Cave-only species stay inside generated cave chambers.
+- Cave networks now generate per server as connected chambers and tunnels;
+  everyone on that server sees the same layout.
+- Boss targets are shared fish instances; the first valid hook owns the
+  fight, and catches or escapes release/update the island target.
+
+MULTIPLAYER
+- The multiplayer protocol is now version 8. The host server and all players
+  must use the same 1.9.0 build.
+
+ALSO INCLUDED
+- Casting-line and reel-tension fixes from 1.8.0.
+- Fixed the online startup crash caused by a missing mutation-upgrade import.

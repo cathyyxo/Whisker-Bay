@@ -1,4 +1,6 @@
 """Game data: rarities, mutations, islands, fish, rods, boats, gear, bait, enchantments, quests and pets."""
+import random
+
 from .util import D
 
 
@@ -270,11 +272,41 @@ FISH = [
 for _f in FISH:
     _f.dr = _f.dr or 50
 FI = {f.id: f for f in FISH}
-CAVES = {
+CAVE_BASES = {
     'trench': T(name='Lantern Grotto', x=(0.12, 0.34), d=(680, 1060), fish=['lanternlurker']),
     'mariana': T(name='Signal Vault', x=(0.58, 0.84), d=(5650, 7550), fish=['chasmphantom']),
     'atlantis': T(name='Keeper’s Archive', x=(0.08, 0.31), d=(2780, 3800), fish=['vaultguardian']),
 }
+
+
+def generateCaves(seed):
+    """Generate a deterministic chamber-and-corridor layout for each cave island."""
+    caves = {}
+    for biome, base in CAVE_BASES.items():
+        rng = random.Random(seed ^ sum((i + 1) * ord(ch) for i, ch in enumerate(biome)))
+        x0, x1 = base.x
+        d0, d1 = base.d
+        span = d1 - d0
+        count = rng.randint(5, 7)
+        centers = []
+        x = rng.uniform(x0 + (x1 - x0) * 0.3, x1 - (x1 - x0) * 0.3)
+        for i in range(count):
+            if i:
+                x = max(x0 + 0.04, min(x1 - 0.04, x + rng.uniform(-0.075, 0.075)))
+            d = d0 + span * (i + 0.5) / count + rng.uniform(-span / count * 0.12, span / count * 0.12)
+            centers.append((x, d))
+        rooms = []
+        for x, d in centers:
+            half_w = rng.uniform(0.035, 0.065)
+            half_d = span / count * rng.uniform(0.35, 0.48)
+            rooms.append(T(x=(max(x0, x - half_w), min(x1, x + half_w)),
+                           d=(max(d0, d - half_d), min(d1, d + half_d))))
+        caves[biome] = T(name=base.name, x=base.x, d=base.d, fish=list(base.fish),
+                         rooms=rooms, corridors=centers)
+    return caves
+
+
+CAVES = generateCaves(0x574849534b4552)
 
 # ---------------- Rods ----------------
 # depth (m), luck (rarity multiplier), control (reel bar width), reel (catch speed), str (resists tension), lure (bites)
@@ -396,6 +428,15 @@ ENCHANTS = [
 ENCH = {e.id: e for e in ENCHANTS}
 
 PATCH_NOTES = [
+    '1.9.0: Ordinary fish populations, Mythics, limited fish and boss targets are shared on each island.',
+    'The first angler to hook a shared target owns it; catches, escapes and disconnects update the world for everyone.',
+    'Cave networks are procedurally generated per server and include connected chambers with cave-only fish.',
+    'Shared fish stream around each angler’s depth, and their movement is synchronized.',
+    'The multiplayer protocol is now version 8; the host and all players must use the same game build.',
+    '1.8.0: Casting line now follows the hook through its flight instead of snapping back to the resting position above water.',
+    'Line slack reacts to hook movement and reel tension, and fish build line tension 50% faster when outside your reel bar.',
+    'Shared Mythic and boss claims now sync your hook state immediately, preventing false "already hooked" denials.',
+    'Fixed an online startup crash caused by the mutation-upgrade data import being missing.',
     '1.7.0: Rarer fish move more deliberately, and later islands have fairer reel bars, tension and catch pacing.',
     'Mythic and boss fights now draw varied tricks from larger move pools, with separate cooldowns so one trick cannot repeat back-to-back.',
     'Admins can summon a random island Mythic or boss. Limited-fish spawns use the server inventory and remain shared with the island.',

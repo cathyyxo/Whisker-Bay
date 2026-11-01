@@ -1,0 +1,17 @@
+WHISKER BAY 1.10.0 - THE PRESENTATION UPDATE
+
+INTERFACE & READABILITY
+- Refined the shared UI theme with clearer panel hierarchy, higher-contrast
+  controls, responsive hover/pressed states, and consistent depth.
+- Shop and inventory cards now have clearer selected/equipped treatments.
+- Small-screen HUD buttons identify themselves on hover instead of relying
+  on icon recognition alone.
+- Fishing instructions now sit in a readable, adaptive hint panel.
+- The title screen and menus have clearer visual grouping and spacing.
+- Sliders, scrollbars, and text fields have stronger focus and interaction
+  feedback.
+
+GAMEPLAY
+- Fishing rules and progression are unchanged in this presentation update.
+- The multiplayer wire protocol is unchanged, so protocol-8 players and
+  servers remain compatible with the 1.9.0 shared-fish release.

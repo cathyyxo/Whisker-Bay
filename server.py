@@ -16,6 +16,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import math
 import os
 import random
 import re
@@ -26,7 +27,7 @@ import tempfile
 import threading
 import time
 
-PROTO = 7
+PROTO = 8
 MAX_LINE = 1_000_000          # biggest message we accept (a save is usually well under 100 KB)
 MAX_SAVE = 600_000
 PBKDF2_ITER = 200_000
@@ -198,6 +199,8 @@ class Client:
         self.auth_times = []
         self.st_times = []
         self.shared_claim_times = []
+        self.boss_search_times = []
+        self.population_chunk = None
         self.closed = False
 
     def send(self, obj):
@@ -232,8 +235,12 @@ class Server:
         self.creating = set()
         self.loop = None
         self.shared_fish = {}
+        self.shared_population = {}
         self.shared_respawn = {}
         self.shared_bosses = {}
+        self.shared_boss_targets = {}
+        self.shared_boss_respawn = {}
+        self.caves = _gd.generateCaves(secrets.randbits(32)) if _gd else {}
         saved_limited = read_json(os.path.join(DATA_DIR, 'limited_fish.json'))
         self.limited_remaining = {
             species: int(num(saved_limited.get(species), 0, initial, initial))
@@ -294,6 +301,181 @@ class Server:
             if c.state and c.state.get('b') == biome:
                 c.send({'t': 'shared_fish', 'fish': fish})
 
+    def shared_boss_snapshot(self, biome):
+        if not _gd or biome not in _gd.BOSSES or time.time() < self.shared_boss_respawn.get(biome, 0):
+            return None
+        fish = self.shared_boss_targets.get(biome)
+        if not fish or fish.get('owner'):
+            return None
+        return {key: fish[key] for key in ('id', 'b', 'sp', 'd', 'kg', 'x', 'mut')}
+
+    def broadcast_shared_boss(self, biome):
+        boss = self.shared_boss_snapshot(biome)
+        for c in self.players():
+            if c.state and c.state.get('b') == biome:
+                c.send({'t': 'shared_boss', 'fish': boss})
+
+    def on_boss_search(self, c, m):
+        biome = m.get('b')
+        state = c.state or {}
+        now = time.time()
+        times = [stamp for stamp in c.boss_search_times if now - stamp < 5]
+        if len(times) >= 3:
+            c.boss_search_times = times
+            return
+        times.append(now)
+        c.boss_search_times = times
+        if biome != state.get('b') or state.get('m') not in ('idle', 'charge', 'flying', 'sinking'):
+            c.send({'t': 'shared_boss', 'fish': None})
+            return
+        if now < self.shared_boss_respawn.get(biome, 0):
+            c.send({'t': 'shared_boss', 'fish': None})
+            return
+        fish = self.shared_boss_targets.get(biome)
+        if fish and fish.get('owner'):
+            lock = self.shared_bosses.get(biome)
+            owner_connected = any(peer.id == fish['owner'] for peer in self.players())
+            if not lock or lock.get('expires', 0) <= now or not owner_connected:
+                fish['owner'] = None
+                self.shared_bosses.pop(biome, None)
+        if fish is None:
+            boss = _gd.BOSSES.get(biome) if _gd else None
+            if not boss:
+                c.send({'t': 'shared_boss', 'fish': None})
+                return
+            sp = _gd.FI[boss.fish]
+            mut = None
+            for mutation in reversed(_gd.MUTS):
+                if random.random() < mutation.chance:
+                    mut = mutation.id
+                    break
+            fish = self.shared_boss_targets[biome] = {
+                'id': secrets.token_urlsafe(12), 'b': biome, 'sp': sp.id,
+                'd': float(sp.dz),
+                'kg': float(sp.w[0]) + (float(sp.w[1]) - float(sp.w[0])) * random.random() ** 1.8,
+                'x': round(random.uniform(0.2, 0.8), 3), 'mut': mut, 'owner': None,
+            }
+        self.broadcast_shared_boss(biome)
+
+    POPULATION_CHUNK_DEPTH = 150
+    POPULATION_CHUNK_SIZE = 16
+
+    def _new_population_fish(self, biome, chunk):
+        if not _gd:
+            return None
+        depth = float(_gd.BIOMES[biome].depth)
+        d0 = max(0.0, chunk * self.POPULATION_CHUNK_DEPTH)
+        d1 = min(depth, d0 + self.POPULATION_CHUNK_DEPTH)
+        if d0 >= d1:
+            return None
+        cave = self.caves.get(biome)
+        species = [f for f in _gd.FISH if f.b == biome and _gd.RI[f.r] < 5
+                   and not getattr(f, 'limited', 0)
+                   and (not getattr(f, 'cave', False)
+                        or (cave and any(max(d0, room.d[0]) < min(d1, room.d[1])
+                                         for room in cave.rooms)))]
+        if not species:
+            return None
+        at = random.uniform(d0, d1)
+        weights = [
+            _gd.RAR[_gd.RI[fish.r]].w
+            * max(0.01, 1 - max(0.0, abs(at - fish.dz) - fish.dr) / 300)
+            for fish in species
+        ]
+        sp = random.choices(species, weights=weights, k=1)[0]
+        cave = self.caves.get(biome) if getattr(sp, 'cave', False) else None
+        cave_room_index = None
+        if cave:
+            rooms = [(index, room) for index, room in enumerate(cave.rooms)
+                     if max(d0, room.d[0]) < min(d1, room.d[1])]
+            cave_room_index, room = random.choice(rooms)
+            at = random.uniform(max(d0, room.d[0]), min(d1, room.d[1]))
+            margin = min(0.015, (room.x[1] - room.x[0]) * 0.2)
+            x_range = (room.x[0] + margin, room.x[1] - margin)
+        if not cave:
+            at = max(d0, min(d1, float(sp.dz) + random.uniform(-float(sp.dr), float(sp.dr))))
+            at = max(d0, min(d1, at))
+            x_range = (0.06, 0.94)
+        mut = None
+        mutation_factor = 1.3 if biome == 'reef' else 1.0
+        for mutation in reversed(_gd.MUTS):
+            if random.random() < mutation.chance * mutation_factor:
+                mut = mutation.id
+                break
+        return {
+            'id': secrets.token_urlsafe(12), 'b': biome, 'sp': sp.id, 'd': round(at, 1),
+            'kg': float(sp.w[0]) + (float(sp.w[1]) - float(sp.w[0])) * random.random() ** 1.8,
+            'x': round(random.uniform(float(x_range[0]), float(x_range[1])), 4),
+            'mut': mut, 'dir': random.choice((-1, 1)), 'owner': None, 'born': time.time(),
+            'amp': random.uniform(2.0, 7.0), 'phase': random.uniform(0.0, 6.283185307179586),
+            'room': cave_room_index,
+        }
+
+    def population_position(self, fish, now=None):
+        now = time.time() if now is None else now
+        elapsed = max(0.0, now - fish['born'])
+        phase = fish['phase']
+        x = fish['x'] + fish['dir'] * 0.025 * math.sin(elapsed * 0.22 + phase)
+        d = fish['d'] + fish['amp'] * math.sin(elapsed * 0.16 + phase * 1.7)
+        room_index = fish.get('room')
+        cave = self.caves.get(fish['b'])
+        if (isinstance(room_index, int) and not isinstance(room_index, bool)
+                and cave and 0 <= room_index < len(cave.rooms)):
+            room = cave.rooms[room_index]
+            x = max(room.x[0], min(room.x[1], x))
+            d = max(room.d[0], min(room.d[1], d))
+        depth = float(_gd.BIOMES[fish['b']].depth) if _gd and fish['b'] in _gd.BIOMES else 3000.0
+        return max(0.02, min(0.98, x)), max(0.0, min(depth, d))
+
+    def shared_population_snapshot(self, biome, center_depth=0.0):
+        if not _gd or biome not in BIOMES:
+            return []
+        population = self.shared_population.setdefault(biome, {})
+        depth = float(_gd.BIOMES[biome].depth)
+        low_chunk = max(0, int(max(0, center_depth - 350) // self.POPULATION_CHUNK_DEPTH))
+        high_chunk = min(int(depth // self.POPULATION_CHUNK_DEPTH),
+                         int((center_depth + 350) // self.POPULATION_CHUNK_DEPTH))
+        for chunk in range(low_chunk, high_chunk + 1):
+            existing = [fish for fish in population.values() if fish.get('chunk') == chunk]
+            while len(existing) < self.POPULATION_CHUNK_SIZE:
+                fish = self._new_population_fish(biome, chunk)
+                if fish is None:
+                    break
+                fish['chunk'] = chunk
+                population[fish['id']] = fish
+                existing.append(fish)
+        low_depth = max(0, center_depth - 350)
+        high_depth = min(depth, center_depth + 350)
+        result = []
+        now = time.time()
+        for fish in population.values():
+            if fish.get('owner'):
+                continue
+            x, d = self.population_position(fish, now)
+            if low_depth <= d <= high_depth:
+                result.append({key: fish[key] for key in
+                               ('id', 'b', 'sp', 'd', 'kg', 'x', 'mut', 'dir', 'born', 'amp', 'phase', 'room')})
+        return result
+
+    def send_shared_population(self, c, biome):
+        center = (c.state or {}).get('hd', 0)
+        center = max(0.0, float(center))
+        cave = self.caves.get(biome)
+        cave_layout = None
+        if cave:
+            cave_layout = {
+                'rooms': [{'x': list(room.x), 'd': list(room.d)} for room in cave.rooms],
+                'corridors': [list(point) for point in cave.corridors],
+            }
+        c.send({'t': 'shared_population', 'b': biome,
+                'fish': self.shared_population_snapshot(biome, center), 'caves': cave_layout,
+                'boss': self.shared_boss_snapshot(biome)})
+
+    def broadcast_shared_population(self, biome):
+        for c in self.players():
+            if c.state and c.state.get('b') == biome:
+                self.send_shared_population(c, biome)
+
     # ---------------- connection ----------------
     async def handle(self, reader, writer):
         c = Client(reader, writer)
@@ -330,6 +512,19 @@ class Server:
             if state.get('owner') == c.id:
                 state['owner'] = None
                 self.broadcast_shared_fish(biome)
+        released = set()
+        for biome, population in self.shared_population.items():
+            for fish in population.values():
+                if fish.get('owner') == c.id:
+                    fish['owner'] = None
+                    released.add(biome)
+        for biome in released:
+            self.broadcast_shared_population(biome)
+        for biome, fish in self.shared_boss_targets.items():
+            if fish.get('owner') == c.id:
+                fish['owner'] = None
+                self.shared_bosses.pop(biome, None)
+                self.broadcast_shared_boss(biome)
         for biome, state in list(self.shared_bosses.items()):
             if state.get('owner') == c.id:
                 del self.shared_bosses[biome]
@@ -373,6 +568,8 @@ class Server:
             self.on_boss(c, bool(m.get('on')))
         elif t == 'shared_claim':
             self.on_shared_claim(c, m)
+        elif t == 'boss_search':
+            self.on_boss_search(c, m)
         elif t == 'shared_release':
             self.on_shared_release(c, m)
         elif t == 'adm':
@@ -490,8 +687,13 @@ class Server:
             lock = self.shared_bosses.get(b)
             if lock and lock.get('owner') == c.id:
                 lock['expires'] = now + 240
+        old_chunk = c.population_chunk
+        population_chunk = int(max(0, st['hd']) // self.POPULATION_CHUNK_DEPTH)
+        c.population_chunk = population_chunk
         if old_biome != b:
             self.send_shared_fish(c, b)
+        if old_biome != b or old_chunk != population_chunk:
+            self.send_shared_population(c, b)
         self.broadcast(dict(st, t='st', id=c.id, n=c.name), skip=c)
 
     def on_boss(self, c, on):
@@ -504,6 +706,10 @@ class Server:
         lock = self.shared_bosses.get(biome)
         if on:
             if not state.get('boss') or state.get('m') not in ('bite', 'reel'):
+                c.send({'t': 'boss_claim', 'ok': False, 'b': biome})
+                return
+            target = self.shared_boss_targets.get(biome)
+            if not target or target.get('owner') != c.id:
                 c.send({'t': 'boss_claim', 'ok': False, 'b': biome})
                 return
             owner_connected = any(p.id == lock.get('owner') and p.name == lock.get('name') for p in self.players()) if lock else False
@@ -532,19 +738,46 @@ class Server:
             return
         times.append(time.time())
         c.shared_claim_times = times
-        fish = self.shared_fish.get(biome)
+        population = self.shared_population.get(biome, {})
+        fish = population.get(fish_id) if isinstance(fish_id, str) else None
+        boss_target = False
+        shared_mythic = self.shared_fish.get(biome)
+        if fish is None and shared_mythic and shared_mythic.get('id') == fish_id:
+            fish = shared_mythic
+        if (fish is None and isinstance(fish_id, str)
+                and self.shared_boss_targets.get(biome, {}).get('id') == fish_id):
+            fish = self.shared_boss_targets[biome]
+            boss_target = True
+        fish_x, fish_d = self.population_position(fish) if fish and 'born' in fish else (
+            (fish or {}).get('x', 0.5), (fish or {}).get('d', 0))
+        x_limit = 0.5 if boss_target else 0.24
         if (biome != state.get('b') or not isinstance(fish_id, str) or not fish or fish.get('id') != fish_id
                 or fish.get('owner') or state.get('m') not in ('bite', 'reel')
-                or abs(state.get('hx', -2) - fish.get('x', 0.5)) > 0.24
-                or abs(state.get('hd', -1000) - fish.get('d', 0)) > 90):
+                or abs(state.get('hx', -2) - fish_x) > x_limit
+                or abs(state.get('hd', -1000) - fish_d) > 90):
             c.send({'t': 'shared_claim_result', 'id': fish_id, 'ok': False})
             return
         fish['owner'] = c.id
+        if boss_target:
+            self.shared_bosses[biome] = {'owner': c.id, 'name': c.name, 'expires': time.time() + 240}
         c.send({'t': 'shared_claim_result', 'id': fish_id, 'ok': True})
         self.broadcast({'t': 'shared_claimed', 'id': fish_id, 'b': biome, 'owner': c.name})
 
     def on_shared_release(self, c, m):
         biome, fish_id = m.get('b'), m.get('id')
+        population = self.shared_population.get(biome, {})
+        fish = population.get(fish_id) if isinstance(fish_id, str) else None
+        if fish is not None:
+            if fish.get('owner') == c.id:
+                fish['owner'] = None
+                self.broadcast_shared_population(biome)
+            return
+        fish = self.shared_boss_targets.get(biome)
+        if fish and fish.get('id') == fish_id and fish.get('owner') == c.id:
+            fish['owner'] = None
+            self.shared_bosses.pop(biome, None)
+            self.broadcast_shared_boss(biome)
+            return
         fish = self.shared_fish.get(biome)
         if not fish or fish.get('id') != fish_id or fish.get('owner') != c.id:
             return
@@ -674,6 +907,26 @@ class Server:
             return
         shared_id = m.get('shared_id')
         state = c.state or {}
+        biome = state.get('b')
+        boss_target = self.shared_boss_targets.get(biome)
+        if (isinstance(shared_id, str) and boss_target and boss_target.get('id') == shared_id
+                and boss_target.get('owner') == c.id and boss_target.get('sp') == sp and tier == 6):
+            del self.shared_boss_targets[biome]
+            self.shared_bosses.pop(biome, None)
+            self.shared_boss_respawn[biome] = time.time() + 40
+            self.broadcast({'t': 'shared_caught', 'id': shared_id, 'b': biome})
+            self.broadcast_shared_boss(biome)
+        population = self.shared_population.get(biome, {})
+        shared_population_fish = population.get(shared_id) if isinstance(shared_id, str) else None
+        if (shared_population_fish and shared_population_fish.get('owner') == c.id
+                and shared_population_fish.get('sp') == sp):
+            del population[shared_id]
+            replacement = self._new_population_fish(biome, shared_population_fish.get('chunk', 0))
+            if replacement:
+                replacement['chunk'] = shared_population_fish.get('chunk', 0)
+                population[replacement['id']] = replacement
+            self.broadcast({'t': 'shared_caught', 'id': shared_id, 'b': biome})
+            self.broadcast_shared_population(biome)
         shared = self.shared_fish.get(state.get('b'))
         if (isinstance(shared_id, str) and shared and shared.get('id') == shared_id and shared.get('owner') == c.id
                 and shared.get('sp') == sp and tier == 5):
