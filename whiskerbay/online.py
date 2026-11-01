@@ -11,7 +11,7 @@ from .data import BIOMES, BOSSES, EMOTES, RAR
 from .settings import SET, save_settings
 from .util import D
 
-PROTO = 7
+PROTO = 8
 conn = None
 st = D(phase='off', server='', host='', port=7777, user='', token=None, remember=False, error='', status='',
        motd='', srvname='', needCode=False, kicked='', cloud=None, newangler=False, ping=None, admin=False)
@@ -268,11 +268,11 @@ def _tick_peers(dt):
             Wd.refreshStats()
 
 
-def _send_presence(dt):
+def _send_presence(dt, force=False):
     global _presence_t, _last_payload, _last_payload_t
     G, P = Wd.G, Wd.P
     _presence_t -= dt
-    if _presence_t > 0:
+    if _presence_t > 0 and not force:
         return
     _presence_t = 0.12
     boss = bool((G.reel and G.reel.boss) or (G.bite and G.bite.f.tier == 6))
@@ -280,7 +280,7 @@ def _send_presence(dt):
                'ten': round(G.reel.ten, 2) if G.reel else 0, 'fur': P.fur, 'boat': P.boat, 'rod': P.rod,
                'ench': (P.rods.get(P.rod) or {}).get('ench'), 'lvl': P.level, 'boss': boss, 'pets': list(P.petOn)[:2]}
     now = time.time()
-    if payload != _last_payload or now - _last_payload_t > 2:
+    if force or payload != _last_payload or now - _last_payload_t > 2:
         conn.send(dict(payload, t='st'))
         _last_payload = payload
         _last_payload_t = now
@@ -296,9 +296,14 @@ def _drain_events():
             conn.send({'t': 'catch', 'sp': data.sp, 'tier': data.tier, 'mut': data.mut, 'val': data.val, 'kg': data.kg,
                        'shared_id': data.get('shared_id')})
         elif kind == 'boss':
+            _send_presence(0, force=True)
             conn.send({'t': 'boss', 'on': bool(data)})
         elif kind == 'shared_claim':
+            _send_presence(0, force=True)
             conn.send({'t': 'shared_claim', 'b': data.b, 'id': data.id})
+        elif kind == 'boss_search':
+            _send_presence(0, force=True)
+            conn.send({'t': 'boss_search', 'b': data.b})
         elif kind == 'shared_release':
             conn.send({'t': 'shared_release', 'b': data.b, 'id': data.id})
 
@@ -406,6 +411,11 @@ def _handle(m):
         _on_state(m)
     elif t == 'shared_fish':
         Wd.setSharedFish(m.get('fish'))
+    elif t == 'shared_population':
+        Wd.setSharedPopulation(m.get('b'), m.get('fish'), m.get('caves'))
+        Wd.setSharedBoss(m.get('boss'))
+    elif t == 'shared_boss':
+        Wd.setSharedBoss(m.get('fish'))
     elif t == 'shared_claimed':
         Wd.removeSharedFish(m.get('id'), m.get('owner'))
     elif t == 'shared_claim_result':

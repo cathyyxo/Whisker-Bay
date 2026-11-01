@@ -1,0 +1,14 @@
+WHISKER BAY 1.8.0 - CASTING & LINE PHYSICS
+
+FISHING
+- The line follows the hook throughout its cast instead of snapping back to
+  the resting position while the hook is above water.
+- Line slack responds to hook movement and reel tension.
+- Fish build line tension 50% faster while outside the reel bar.
+- Shared Mythic and boss claims sync hook state immediately to prevent
+  false "already hooked" denials.
+
+FIXES
+- Fixed an online startup crash caused by a missing mutation-upgrade import.
+- The multiplayer protocol remains version 7; all players and the host need
+  the same 1.8.0 game build.

@@ -8,7 +8,7 @@ from pygame import gfxdraw
 from . import ui
 from . import world as Wd
 from .art import Pen, _blur, blit_fish
-from .data import BIOME_IDS, BIOMES, CAVES, FISH, RI
+from .data import BIOME_IDS, BIOMES, FISH, RI
 from .sfx import Sfx
 from .util import D, TAU, clamp, hexc, lerp, mix, rand
 
@@ -1896,19 +1896,28 @@ def draw_walls(c, B):
             rim = mix(Th.wallhi, water_col(B, dm), clamp(dm / end, 0, 1) * 0.72)
             pygame.draw.aalines(c, rim, False, seg)
             pygame.draw.aalines(c, rim, False, [(x + sgn, y) for x, y in seg])
-    cave = CAVES.get(P.biome)
+    cave = Wd.caveLayout(P.biome)
     if cave:
-        depth = sum(cave.d) / 2
-        cy = int(sy(depth))
-        if -120 * Sc < cy < H + 120 * Sc:
-            cx = int(sum(cave.x) * 0.5 * W)
-            cw, ch = int(150 * Sc), int(104 * Sc)
-            mouth = pygame.Rect(cx - cw // 2, cy - ch // 2, cw, ch)
-            rock = pygame.Rect(mouth.x - int(14 * Sc), mouth.y - int(12 * Sc), mouth.w + int(28 * Sc), mouth.h + int(24 * Sc))
-            gfxdraw.filled_ellipse(c, rock.centerx, rock.centery, rock.w // 2, rock.h // 2, hexc(Th.wall))
-            gfxdraw.filled_ellipse(c, mouth.centerx, mouth.centery, mouth.w // 2, mouth.h // 2, hexc(mix(water_col(B, depth), '#000000', 0.72)))
-            pygame.draw.arc(c, hexc(Th.wallhi), rock, math.pi, TAU, max(2, int(5 * Sc)))
-            pygame.draw.arc(c, hexc(Th.wallhi), mouth, math.pi, TAU, max(1, int(2 * Sc)))
+        points = [(int(x * W), int(sy(d))) for x, d in cave.corridors]
+        for start, end in zip(points, points[1:]):
+            pygame.draw.line(c, hexc(Th.wall), start, end, max(8, int(42 * Sc)))
+            pygame.draw.line(c, hexc(Th.wallhi), start, end, max(2, int(5 * Sc)))
+        for room in cave.rooms:
+            depth = sum(room.d) / 2
+            cy = int(sy(depth))
+            if -140 * Sc < cy < H + 140 * Sc:
+                cx = int(sum(room.x) * 0.5 * W)
+                cw = max(int(86 * Sc), int((room.x[1] - room.x[0]) * W))
+                ch = max(int(68 * Sc), int((room.d[1] - room.d[0]) * G.PPM * 1.5))
+                mouth = pygame.Rect(cx - cw // 2, cy - ch // 2, cw, ch)
+                rock = pygame.Rect(mouth.x - int(14 * Sc), mouth.y - int(12 * Sc),
+                                   mouth.w + int(28 * Sc), mouth.h + int(24 * Sc))
+                gfxdraw.filled_ellipse(c, rock.centerx, rock.centery, rock.w // 2, rock.h // 2,
+                                       hexc(Th.wall))
+                gfxdraw.filled_ellipse(c, mouth.centerx, mouth.centery, mouth.w // 2, mouth.h // 2,
+                                       hexc(mix(water_col(B, depth), '#000000', 0.72)))
+                pygame.draw.arc(c, hexc(Th.wallhi), rock, math.pi, TAU, max(2, int(5 * Sc)))
+                pygame.draw.arc(c, hexc(Th.wallhi), mouth, math.pi, TAU, max(1, int(2 * Sc)))
 
 
 def draw_floor(c, fy):

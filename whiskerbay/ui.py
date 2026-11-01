@@ -10,11 +10,11 @@ from .util import clamp, hexc
 
 # ---------------- theme ----------------
 NIGHT = (7, 26, 46)
-PANEL = (14, 42, 70)
-PANEL2 = (20, 58, 95)
-LINE = (43, 90, 132)
-FOAM = (234, 246, 255)
-MIST = (159, 194, 227)
+PANEL = (12, 35, 59)
+PANEL2 = (19, 53, 82)
+LINE = (47, 91, 123)
+FOAM = (239, 248, 255)
+MIST = (171, 201, 225)
 SAND = (255, 217, 138)
 CORAL = (255, 138, 91)
 SEA = (47, 211, 192)
@@ -257,32 +257,48 @@ UI = _Input()
 def button(surf, rect, label, style='', disabled=False, size=14, kind='k', clip=None, radius=12, col=None):
     r = pygame.Rect(rect)
     hover = UI.over(r, clip) and not disabled
+    pressed = hover and pygame.mouse.get_pressed()[0]
     if hover:
         UI.hot = True
     a = 0.45 if disabled else 1.0
     tcol = FOAM
+    lift = 0 if pressed else 2
+    if style not in ('ghost', 'tab') and not disabled:
+        box(surf, (r.x, r.y + lift, r.w, r.h), (1, 10, 23, 100), None, radius)
     if style == 'go':
-        box(surf, r, None, (255, 243, 201), radius, 1, grad=((255, 236, 186) if hover else (255, 227, 163), (255, 206, 110) if hover else (255, 198, 90)), alpha=a)
+        top = (255, 228, 157) if pressed else (255, 241, 196) if hover else (255, 228, 164)
+        bottom = (235, 169, 69) if pressed else (255, 197, 91)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), None,
+            (255, 245, 212), radius, 1, grad=(top, bottom), alpha=a)
         tcol = INK
     elif style == 'warn':
-        box(surf, r, (255, 79, 109, 70 if hover else 46), DANGER, radius, 1, alpha=a)
+        fill = (255, 79, 109, 86 if hover else 56)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), fill, DANGER, radius, 1, alpha=a)
         tcol = (255, 208, 216)
     elif style == 'tab':
-        box(surf, r, (255, 255, 255, 18) if hover else (0, 0, 0, 0), LINE, radius, 1, alpha=a)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift),
+            (255, 255, 255, 24) if hover else (0, 0, 0, 0), LINE if hover else (47, 91, 123, 80),
+            radius, 1, alpha=a)
         tcol = MIST
     elif style == 'tabon':
-        box(surf, r, SAND, SAND, radius, 1, alpha=a)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), SAND, (255, 241, 192), radius, 1, alpha=a)
         tcol = INK
     elif style == 'hud':
-        box(surf, r, (20, 58, 95, 230) if hover else (7, 26, 46, 190), (234, 246, 255, 50), radius, 1, alpha=a)
+        fill = (27, 78, 111, 246) if hover else (7, 26, 46, 212)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), fill,
+            (130, 194, 220, 150) if hover else (234, 246, 255, 64), radius, 1, alpha=a)
     elif style == 'hot':
-        box(surf, r, (20, 58, 95, 230) if hover else (7, 26, 46, 190), SAND, radius, 2, alpha=a)
+        fill = (27, 78, 111, 246) if hover else (7, 26, 46, 212)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), fill, SAND, radius, 2, alpha=a)
     elif style == 'ghost':
-        box(surf, r, (255, 255, 255, 22) if hover else (0, 0, 0, 0), None, radius, 1, alpha=a)
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift),
+            (255, 255, 255, 28) if hover else (0, 0, 0, 0), None, radius, 1, alpha=a)
     else:
-        box(surf, r, (30, 74, 116) if hover else PANEL2, LINE, radius, 1, alpha=a)
+        fill = (31, 82, 116) if hover else PANEL2
+        box(surf, (r.x, r.y + lift, r.w, r.h - lift), fill,
+            (102, 158, 191) if hover else LINE, radius, 1, alpha=a)
     if label:
-        text(surf, label, r.centerx, r.centery, kind, size, col or tcol, 'center', 'middle', alpha=a)
+        text(surf, label, r.centerx, r.centery + lift // 2, kind, size, col or tcol, 'center', 'middle', alpha=a)
     if disabled:
         if UI.click and r.collidepoint(UI.click) and (clip is None or pygame.Rect(clip).collidepoint(UI.click)):
             UI.consumed = True
@@ -322,7 +338,10 @@ class TextField:
             UI.consumed = True
             UI.focus = self
             focused = True
-        box(surf, r, NIGHT, SAND if focused else LINE, 12, 2 if focused else 1)
+        box(surf, (r.x, r.y + (2 if focused else 0), r.w, r.h), (3, 18, 34),
+            SAND if focused else LINE, 12, 2 if focused else 1)
+        if focused:
+            box(surf, (r.x + 5, r.y + 5, r.w - 10, 2), (255, 217, 138, 90), None, 1)
         shown = ('*' * len(self.text)) if self.password else self.text
         submit = False
         if focused:
@@ -408,9 +427,11 @@ class Slider:
             else:
                 value = lo + clamp((UI.mouse[0] - r.x) / max(1, r.w), 0, 1) * (hi - lo)
         u = (value - lo) / (hi - lo)
-        box(surf, (r.x, r.centery - 4, r.w, 8), (255, 255, 255, 36), None, 4)
-        box(surf, (r.x, r.centery - 4, max(8, int(r.w * u)), 8), SAND, None, 4)
-        pygame.draw.circle(surf, FOAM, (int(r.x + r.w * u), r.centery), 9)
+        box(surf, (r.x, r.centery - 3, r.w, 6), (0, 8, 20, 170), None, 3)
+        box(surf, (r.x, r.centery - 3, max(6, int(r.w * u)), 6), SEA, None, 3)
+        pygame.draw.circle(surf, (1, 13, 27), (int(r.x + r.w * u), r.centery + 1), 10)
+        pygame.draw.circle(surf, FOAM, (int(r.x + r.w * u), r.centery), 8)
+        pygame.draw.circle(surf, SAND, (int(r.x + r.w * u), r.centery), 8, 2)
         return value
 
 
@@ -438,8 +459,8 @@ class Scroll:
         bh = max(30, int(r.h * frac))
         mx = self.content - r.h
         by = r.y + int((r.h - bh) * (self.off / mx if mx else 0))
-        track = pygame.Rect(r.right - 8, r.y, 6, r.h)
-        knob = pygame.Rect(r.right - 8, by, 6, bh)
+        track = pygame.Rect(r.right - 9, r.y, 8, r.h)
+        knob = pygame.Rect(r.right - 9, by, 8, bh)
         if UI.click and not UI.consumed and track.inflate(10, 0).collidepoint(UI.click):
             UI.consumed = True
             self.drag = (UI.click[1], self.off)
@@ -449,5 +470,5 @@ class Scroll:
             else:
                 dy = UI.mouse[1] - self.drag[0]
                 self.off = clamp(self.drag[1] + dy * self.content / r.h, 0, mx)
-        box(surf, track, (255, 255, 255, 20), None, 3)
-        box(surf, knob, (159, 194, 227, 150), None, 3)
+        box(surf, track, (2, 15, 29, 100), None, 4)
+        box(surf, knob, SEA if UI.over(knob) or self.drag else (171, 201, 225, 190), None, 4)

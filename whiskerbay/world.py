@@ -7,8 +7,8 @@ import time
 from . import settings
 from .data import (ABILITIES, BAIT, BIOME_IDS, BIOMES, BOAT, BOATS, BOSS_STAGE_GIMS, BOSSES, CAVES, EGG, ENCH, FI, FISH, FUR_BONUSES,
                    FUR_REWARD, FURS, GIMMICKS, ISLE, KEEPER_LOGS, KITTEN, MUT, MUT_GIMS, MUTS, MYTHIC_GIM_POOL, PET, PET_DUPE_MIN,
-                   PET_LEVEL_MIN, PET_MAX, QI, QUEST_VERSION, MATS, QUESTS, RAR, REEL, RI, ROD, RODS, ROD_SKILL, SKILLS,
-                   slice_amount)
+                   PET_LEVEL_MIN, PET_MAX, QI, QUEST_VERSION, MATS, MUT_UPGRADES, QUESTS, RAR, REEL, RI, ROD, RODS,
+                   ROD_SKILL, SKILLS, slice_amount)
 from .sfx import Sfx
 from .util import D, TAU, clamp, jround, lerp, pick, rand, sign, todot
 
@@ -572,7 +572,8 @@ class SPart:
 class Fish:
     __slots__ = ('sp', 'tier', 'mut', 'kg', 'size', 'dir', 'x', 'd', 'home', 'spd', 'amp', 'ph', 'state', 'st',
                  'nib', 'need', 'burst', 'dartT', 'tt', 'blinkT', 'alpha', 'vx', 'vd', 'spook', 'anim', 'turn', 'seed',
-                 'pinged', 'touch', 'seen', 'sharedId')
+                 'pinged', 'touch', 'seen', 'sharedId', 'sharedX', 'sharedD', 'sharedBorn', 'sharedAmp',
+                 'sharedPhase', 'sharedRoom')
 
 
 class Game:
@@ -591,6 +592,10 @@ class Game:
         self.chargeDir = 1
         self.fly = None
         self.fish = []
+        self.sharedPopulation = {}
+        self.sharedBoss = None
+        self.bossSearchPending = False
+        self.caveLayouts = {}
         self.parts = []
         self.sparts = []
         self.floats = []
@@ -736,6 +741,9 @@ def flash(a, col='#ffffff'):
 # ---------------- arriving at an island ----------------
 def enterBiome():
     G.fish = []
+    G.sharedPopulation = {}
+    G.sharedBoss = None
+    G.bossSearchPending = False
     G.sharedFish = None
     G.parts = []
     G.sparts = []
@@ -756,9 +764,55 @@ def enterBiome():
         G.eruptT = rand(20, 40)
         G.erupt = 0
     refreshStats()
-    for _ in range(16):
-        spawnFish(True)
+    if MODE != 'online':
+        for _ in range(16):
+            spawnFish(True)
     setMode('idle')
+
+
+def caveLayout(biome):
+    return G.caveLayouts.get(biome) or CAVES.get(biome)
+
+
+def setCaveLayout(biome, layout):
+    if biome not in BIOMES:
+        return False
+    if layout is None:
+        G.caveLayouts.pop(biome, None)
+        return True
+    if not isinstance(layout, dict):
+        return False
+    rooms, corridors = layout.get('rooms'), layout.get('corridors')
+    if not isinstance(rooms, list) or not 1 <= len(rooms) <= 12 or not isinstance(corridors, list):
+        return False
+    parsed_rooms = []
+    for room in rooms:
+        if not isinstance(room, dict):
+            return False
+        x, d = room.get('x'), room.get('d')
+        if (not isinstance(x, list) or len(x) != 2 or not isinstance(d, list) or len(d) != 2
+                or any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)
+                       for value in x + d)
+                or not 0 <= x[0] < x[1] <= 1 or not 0 <= d[0] < d[1] <= BIOMES[biome].depth):
+            return False
+        parsed_rooms.append(D(x=tuple(x), d=tuple(d)))
+    parsed_corridors = []
+    if len(corridors) != len(parsed_rooms) or any(
+            not isinstance(point, list) or len(point) != 2
+            or any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value)
+                   for value in point)
+            or not 0 <= point[0] <= 1 or not 0 <= point[1] <= BIOMES[biome].depth
+            for point in corridors):
+        return False
+    parsed_corridors = [tuple(point) for point in corridors]
+    base = CAVES.get(biome)
+    if base:
+        G.caveLayouts[biome] = D(name=base.name, x=base.x, d=base.d, fish=base.fish,
+                                 rooms=parsed_rooms, corridors=parsed_corridors)
+    else:
+        G.caveLayouts[biome] = D(name='Cave', x=(0.05, 0.95), d=(0, BIOMES[biome].depth),
+                                 fish=[], rooms=parsed_rooms, corridors=parsed_corridors)
+    return True
 
 
 # ---------------- fish spawning ----------------
@@ -779,22 +833,31 @@ def spawnFish(initial, force=None, at=None):
     d = rand(lo, hi) if at is None else at
     S = G.stats
     special_x = None
+    special_room = None
     if force is not None:
         sp = force
     else:
-        cave = CAVES.get(P.biome)
+        cave = caveLayout(P.biome)
         cave_fish = [FI[k] for k in cave.fish] if cave else []
         cave_lo = max(lo, cave.d[0]) if cave else 1
         cave_hi = min(hi, cave.d[1]) if cave else 0
-        if cave_fish and cave_hi > cave_lo and random.random() < 0.12:
+        cave_rooms = [(i, room) for i, room in enumerate(cave.rooms)
+                      if max(cave_lo, room.d[0]) < min(cave_hi, room.d[1])] if cave else []
+        if MODE != 'online' and cave_fish and cave_rooms and random.random() < 0.12:
             sp = pick(cave_fish)
-            d = rand(cave_lo, cave_hi)
-            special_x = rand(cave.x[0], cave.x[1])
+            special_room, room = pick(cave_rooms)
+            d = rand(max(cave_lo, room.d[0]), min(cave_hi, room.d[1]))
+            special_x = rand(room.x[0], room.x[1])
         else:
             tier = rollRarity(P.biome, d, S)
             if tier == 6 and any(f.tier == 6 for f in G.fish):
                 tier = 0
-            if MODE == 'online' and tier == 5:
+            if MODE == 'online':
+                if tier != 6:
+                    return
+                if not G.sharedBoss and not G.bossSearchPending:
+                    G.bossSearchPending = True
+                    G.events.append(('boss_search', D(b=P.biome)))
                 return
             sp = speciesFor(P.biome, tier, d)
     tier = RI[sp.r]
@@ -832,6 +895,7 @@ def spawnFish(initial, force=None, at=None):
     f.seen = False
     f.touch = 0.0
     f.sharedId = None
+    f.sharedRoom = special_room
     G.fish.append(f)
     return f
 
@@ -856,6 +920,138 @@ def setSharedFish(data):
         G.fish[:] = [f for f in G.fish if f.sharedId != old.id]
     _spawnSharedFish()
     return True
+
+
+def setSharedPopulation(biome, records, caves=None):
+    """Mirror the server's ordinary fish population for the current island and depth range."""
+    if P is None or biome != P.biome or not isinstance(records, list) or len(records) > 128:
+        return False
+    if not setCaveLayout(biome, caves):
+        toast('The server sent an invalid cave layout; the previous layout remains active.', 'bad')
+        return False
+    cave = caveLayout(biome)
+    valid = {}
+    for data in records:
+        if not isinstance(data, dict):
+            continue
+        fish_id = data.get('id')
+        sp = FI.get(data.get('sp'))
+        room = data.get('room')
+        if sp and sp.cave:
+            if (not cave or not isinstance(room, int) or isinstance(room, bool)
+                    or not 0 <= room < len(cave.rooms)):
+                continue
+        else:
+            room = None
+        if (not isinstance(fish_id, str) or not fish_id or len(fish_id) > 64 or not sp or sp.b != biome
+                or RI[sp.r] >= 5 or not isinstance(data.get('d'), (int, float))
+                or isinstance(data.get('d'), bool) or not math.isfinite(data['d'])
+                or not isinstance(data.get('kg'), (int, float)) or isinstance(data.get('kg'), bool)
+                or not math.isfinite(data['kg']) or not isinstance(data.get('x'), (int, float))
+                or isinstance(data.get('x'), bool) or not math.isfinite(data['x'])
+                or not isinstance(data.get('born'), (int, float)) or isinstance(data.get('born'), bool)
+                or not math.isfinite(data['born'])
+                or not isinstance(data.get('amp'), (int, float)) or isinstance(data.get('amp'), bool)
+                or not math.isfinite(data['amp']) or not isinstance(data.get('phase'), (int, float))
+                or isinstance(data.get('phase'), bool) or not math.isfinite(data['phase'])):
+            continue
+        valid[fish_id] = data
+    old_ids = set(G.sharedPopulation)
+    for fish_id, data in valid.items():
+        sp = FI[data['sp']]
+        f = G.sharedPopulation.get(fish_id)
+        if f is None:
+            f = Fish()
+            f.sp, f.tier = sp, RI[sp.r]
+            f.mut = data.get('mut') if data.get('mut') in MUT else None
+            f.kg = clamp(data['kg'], sp.w[0], sp.w[1])
+            wf = wfrac(sp, f.kg)
+            f.size = sp.len * G.S * FISH_K * (0.78 + 0.45 * wf)
+            f.dir = -1 if data.get('dir') == -1 else 1
+            f.x = clamp(data['x'], 0.02, 0.98) * G.W
+            f.d = f.home = clamp(data['d'], 0, BIOMES[biome].depth)
+            f.sharedX, f.sharedD, f.sharedBorn = clamp(data['x'], 0.02, 0.98), f.d, data['born']
+            f.sharedAmp, f.sharedPhase = clamp(data['amp'], 0, 30), data['phase']
+            f.sharedRoom = room
+            f.spd = (14 + 4.5 * f.tier) * G.S * SWIM_K
+            f.amp = rand(1, 4)
+            f.ph = random.random() * 10
+            f.anim = random.random() * 10
+            f.turn = f.vx = f.vd = f.spook = 0.0
+            f.seed = random.random() * 6.28
+            f.state = 'swim'
+            f.st = f.nib = f.need = f.burst = 0.0
+            f.dartT, f.tt, f.blinkT = rand(0.5, 3), rand(0.5, 2), rand(2, 5)
+            f.alpha, f.pinged, f.seen, f.touch = 1.0, False, False, 0.0
+            f.sharedId = fish_id
+            G.sharedPopulation[fish_id] = f
+            G.fish.append(f)
+        else:
+            f.sp, f.tier = sp, RI[sp.r]
+            f.sharedX, f.sharedD, f.sharedBorn = clamp(data['x'], 0.02, 0.98), clamp(data['d'], 0, BIOMES[biome].depth), data['born']
+            f.sharedAmp, f.sharedPhase = clamp(data['amp'], 0, 30), data['phase']
+            f.sharedRoom = room
+    for fish_id in old_ids - set(valid):
+        f = G.sharedPopulation.pop(fish_id)
+        if G.reel and G.reel.f is f:
+            continue
+        if f in G.fish:
+            G.fish.remove(f)
+    return True
+
+
+def setSharedBoss(data):
+    G.bossSearchPending = False
+    if not isinstance(data, dict) or P is None or data.get('b') != P.biome:
+        old = G.sharedBoss
+        active = old and (G.bite and G.bite.f is old or G.reel and G.reel.f is old)
+        if not active:
+            G.sharedBoss = None
+            if old and old in G.fish:
+                G.fish.remove(old)
+        if data is None:
+            G.spawnT = max(G.spawnT, 3.0)
+        return data is None
+    sp = FI.get(data.get('sp'))
+    boss = BOSSES.get(P.biome)
+    if (not isinstance(data.get('id'), str) or not sp or not boss or sp.id != boss.fish
+            or not isinstance(data.get('d'), (int, float)) or isinstance(data.get('d'), bool)
+            or not math.isfinite(data['d']) or not isinstance(data.get('kg'), (int, float))
+            or isinstance(data.get('kg'), bool) or not math.isfinite(data['kg'])
+            or not isinstance(data.get('x'), (int, float)) or isinstance(data.get('x'), bool)
+            or not math.isfinite(data['x'])):
+        toast('The server sent invalid shared-boss data; this encounter was hidden.', 'bad')
+        return False
+    old = G.sharedBoss
+    G.sharedBoss = Fish()
+    f = G.sharedBoss
+    f.sp, f.tier = sp, 6
+    f.mut = data.get('mut') if data.get('mut') in MUT else None
+    f.kg = clamp(data['kg'], sp.w[0], sp.w[1])
+    f.size = sp.len * G.S * FISH_K * (0.78 + 0.45 * wfrac(sp, f.kg)) * 0.71
+    f.dir, f.x = 1, clamp(data['x'], 0.05, 0.95) * G.W
+    f.d = f.home = clamp(data['d'], 0, BIOMES[P.biome].depth)
+    f.spd = f.amp = f.ph = f.anim = f.turn = f.vx = f.vd = f.spook = 0.0
+    f.seed = 0.0
+    f.state = 'swim'
+    f.st = f.nib = f.need = f.burst = 0.0
+    f.dartT, f.tt, f.blinkT = 1.0, 1.0, 3.0
+    f.alpha, f.pinged, f.seen, f.touch = 1.0, False, False, 0.0
+    f.sharedId = data['id']
+    f.sharedRoom = None
+    if old and old in G.fish:
+        G.fish.remove(old)
+    G.fish.append(f)
+    return True
+
+
+def _showSharedBoss():
+    f = G.sharedBoss
+    if MODE != 'online' or not f or f in G.fish:
+        return
+    lo, hi = spawnWindow()
+    if lo - 90 <= f.d <= hi + 100:
+        G.fish.append(f)
 
 
 def _spawnSharedFish():
@@ -898,12 +1094,20 @@ def removeSharedFish(shared_id, owner=None):
         return
     if G.sharedFish and G.sharedFish.id == shared_id:
         G.sharedFish = None
+    if G.sharedBoss and G.sharedBoss.sharedId == shared_id:
+        G.sharedBoss = None
+    G.sharedPopulation.pop(shared_id, None)
     for f in G.fish[:]:
         if f.sharedId != shared_id:
             continue
         if G.reel and G.reel.f is f and owner != (P.name if P else None):
             loseReel('slip')
-            toast('Another angler hooked the shared Mythic first.', 'bad')
+            toast('Another angler hooked the shared fish first.', 'bad')
+        elif G.bite and G.bite.f is f:
+            G.bite = None
+            f.state = 'flee'
+            setMode('recall')
+            toast('Another angler hooked the shared fish first.', 'bad')
         if f in G.fish:
             G.fish.remove(f)
 
@@ -951,6 +1155,14 @@ def spookSpeed(S):
     return 1.35 * 22 * (1 + BIO().depth / 1500) * G.PPM * S.hookV + 60 * G.S
 
 
+def canNoticeHook(f, h, S):
+    if f.tier < 2:
+        return True
+    if f.tier < 6:
+        return h.speed <= spookSpeed(S) * (1.3 - 0.13 * f.tier)
+    return h.speed < spookSpeed(S) * 0.5
+
+
 def touchingBait(f, h):
     """True when the hook is in the fish's mouth area: from the snout back along the head."""
     rx = (h.x - f.x) * f.dir
@@ -966,15 +1178,21 @@ def fishTick(dt):
     G.skillT = max(0.0, G.skillT - dt)
     G.skillCD = max(0.0, G.skillCD - dt)
     _spawnSharedFish()
+    _showSharedBoss()
     lo, hi = spawnWindow()
     S, h = G.stats, G.hook
     hookIn = G.mode == 'sinking'
     G.spawnT -= dt
-    want = clamp(jround((hi - lo) / 8.5), 6, 46)
-    if len(G.fish) < want and G.spawnT <= 0:
-        for _ in range(3 if want - len(G.fish) > 8 else 1):
+    if MODE == 'online':
+        if not any(f.tier == 6 for f in G.fish) and G.spawnT <= 0:
             spawnFish(False)
-        G.spawnT = 0.25
+            G.spawnT = 0.25
+    else:
+        want = clamp(jround((hi - lo) / 12), 6, 34)
+        if len(G.fish) < want and G.spawnT <= 0:
+            for _ in range(3 if want - len(G.fish) > 8 else 1):
+                spawnFish(False)
+            G.spawnT = 0.25
     depth = BIO().depth
     for i in range(len(G.fish) - 1, -1, -1):
         f = G.fish[i]
@@ -983,6 +1201,34 @@ def fishTick(dt):
         away = (f.x < -f.size - 80 and f.dir < 0) or (f.x > G.W + f.size + 80 and f.dir > 0)
         if f.d < lo - 90 or f.d > hi + 150 or away:
             G.fish.pop(i)
+            if f.sharedId:
+                G.sharedPopulation.pop(f.sharedId, None)
+            continue
+        if f.sharedId in G.sharedPopulation and f.state == 'swim':
+            elapsed = max(0.0, time.time() - f.sharedBorn)
+            phase = f.sharedPhase
+            shared_x = f.sharedX + f.dir * 0.075 * math.sin(elapsed * 0.22 + phase)
+            shared_d = f.sharedD + f.sharedAmp * math.sin(elapsed * 0.16 + phase * 1.7)
+            cave = caveLayout(P.biome) if f.sharedRoom is not None else None
+            if cave and 0 <= f.sharedRoom < len(cave.rooms):
+                room = cave.rooms[f.sharedRoom]
+                shared_x = clamp(shared_x, room.x[0], room.x[1])
+                shared_d = clamp(shared_d, room.d[0], room.d[1])
+            f.x = clamp(shared_x, 0.02, 0.98) * G.W
+            f.d = f.home = clamp(shared_d, 0, depth)
+            f.ph += dt
+            f.anim += dt * 0.8
+            f.vx = f.vd = 0.0
+            if hookIn and not G.bite and f.spook <= 0:
+                mx, md = mouthOf(f)
+                dist = math.hypot(h.x - mx, (h.d - md) * G.PPM)
+                if dist < noticeRange(f, S) and random.random() < dt * NOTICE[f.tier] * S.bite * attraction(f, S):
+                    f.state = 'chase'
+                    f.st = 0
+                elif f.touch <= 0 and touchingBait(f, h):
+                    f.touch = 1.5
+                    if random.random() < BUMP[f.tier] * min(1.0, attraction(f, S)):
+                        startBite(f)
             continue
         beh = f.sp.beh
         f.ph += dt
@@ -1039,8 +1285,8 @@ def fishTick(dt):
             # one whose mouth touches it takes it. No nibbling, no dancing around the hook.
             R = noticeRange(f, S)
             if f.state == 'swim':
-                # shy fish only notice a bait that is sitting still (park it near them and wait)
-                calm = f.tier < 2 or h.speed < spookSpeed(S) * 0.5
+                # Shy fish notice bait only when it moves below their own spook threshold.
+                calm = canNoticeHook(f, h, S)
                 if calm and dist < R and random.random() < dt * NOTICE[f.tier] * S.bite * attraction(f, S):
                     f.state = 'chase'
                     f.st = 0
@@ -1088,14 +1334,24 @@ def fishTick(dt):
         f.x += f.vx * dt
         f.d = clamp(f.d + f.vd * dt, 2, depth - 3)
         if f.sp.cave:
-            cave = CAVES.get(P.biome)
-            if cave:
-                left, right = cave.x[0] * G.W, cave.x[1] * G.W
+            cave = caveLayout(P.biome)
+            if cave and cave.rooms:
+                room_index = f.sharedRoom if isinstance(f.sharedRoom, int) and f.sharedRoom < len(cave.rooms) else None
+                if room_index is None:
+                    room_index = min(
+                        range(len(cave.rooms)),
+                        key=lambda index: (
+                            max(cave.rooms[index].x[0] - f.x / G.W, 0, f.x / G.W - cave.rooms[index].x[1]) ** 2
+                            + max(cave.rooms[index].d[0] - f.d, 0, f.d - cave.rooms[index].d[1]) ** 2
+                        ),
+                    )
+                room = cave.rooms[room_index]
+                left, right = room.x[0] * G.W, room.x[1] * G.W
                 if f.x < left or f.x > right:
                     f.x = clamp(f.x, left, right)
                     f.vx *= -0.5
                     f.dir = 1 if f.vx >= 0 else -1
-                f.d = clamp(f.d, cave.d[0], cave.d[1])
+                f.d = clamp(f.d, room.d[0], room.d[1])
         if f.state == 'swim' and abs(f.vx) > 4:
             f.dir = 1 if f.vx > 0 else -1
         if f.dir != old_dir:
@@ -1179,7 +1435,9 @@ def hookTick(dt):
         if h.d <= 0 and G.modeT > 0.4:
             setMode('idle')
             h.d = -1
-    h.speed = math.hypot(h.x - ox, (h.d - od) * G.PPM) / max(dt, 1e-3)
+    h.vx = (h.x - ox) / max(dt, 1e-3)
+    h.vd = (h.d - od) / max(dt, 1e-3)
+    h.speed = math.hypot(h.vx, h.vd * G.PPM)
 
 
 def burnLine():
@@ -1217,6 +1475,8 @@ def startBite(f):
     G.hook.x, G.hook.d = mouthOf(f)
     G.hook.d = f.d
     setMode('bite')
+    if f.sharedId:
+        G.events.append(('shared_claim', D(id=f.sharedId, b=P.biome)))
     Sfx.play('bite')
     if f.tier == 6:
         G.stormOn = True
@@ -1557,6 +1817,7 @@ BEH_K = {'calm': 1.0, 'drift': 1.45, 'dart': 0.5, 'erratic': 0.48, 'abyss': 0.6,
 THRASH_K = 1.3     # a thrashing fish is this much faster once it is more than half caught
 DASH_K = 1.8       # a dash
 SLIP_K = 1.22      # progress lost when a slippery fish gets out
+LINE_TENSION_K = 1.5  # tension builds faster while the fish is outside the reel bar
 
 def bossName(fid):
     """'the Pallid Whale' (for the middle of a sentence)."""
@@ -1597,8 +1858,6 @@ def startReel(f):
                barb=False, chill=False)
     R = G.reel
     R.gims = _reel_gims(R)
-    if f.sharedId:
-        G.events.append(('shared_claim', D(id=f.sharedId, b=P.biome)))
     passive = [GIMMICKS[g].name for g in R.gims if GIMMICKS[g].kind == 'passive']
     if passive:
         _label(R, ' + '.join(passive).upper(), GIMMICKS[[g for g in R.gims if GIMMICKS[g].kind == 'passive'][0]].col, 1.6)
@@ -1938,7 +2197,7 @@ def reelTick(dt):
             if inside:
                 R.ten = max(0.0, R.ten - 0.32 * dt)
             else:
-                R.ten += R.tenr / S.str * S.tension * heat * dt
+                R.ten += R.tenr / S.str * S.tension * heat * LINE_TENSION_K * dt
                 R.perfect = False
             if eff.get('burn'):
                 R.ten += 0.12 * dt
@@ -1996,9 +2255,13 @@ def reelTick(dt):
             R.warn = None
             Sfx.play('roar')
             shake(18)
-            flash(0.4, '#00ffd5')
-            floatText(G.hook.x, G.hook.d - 10, f"STAGE {R.stage} / {R.stages}: IT'S FURIOUS", '#00ffd5', 22, 2)
-            toast('Final stage. Hold on!' if R.stage == 3 else (BOSSES.get(R.sp.b) or BOSSES['trench']).stage, 'gold')
+            boss = BOSSES.get(R.sp.b) or BOSSES['trench']
+            flash(0.4, boss.eyes)
+            floatText(G.hook.x, G.hook.d - 10, f"STAGE {R.stage} / {R.stages}: IT'S FURIOUS", boss.eyes, 22, 2)
+            phases = getattr(boss, 'phases', ())
+            phase_index = min(max(0, R.stage - 2), len(phases) - 1) if phases else -1
+            message = phases[phase_index] if phase_index >= 0 else boss.stage
+            toast(('Final stage! ' if R.stage == 3 else '') + message, 'gold')
         else:
             winReel()
     elif R.prog <= 0:
@@ -2108,6 +2371,10 @@ def winReel():
     questEvent('catch', f.sp, f.tier, f.mut, R.perfect)
     if f in G.fish:
         G.fish.remove(f)
+    if f.sharedId:
+        G.sharedPopulation.pop(f.sharedId, None)
+        if G.sharedBoss and G.sharedBoss.sharedId == f.sharedId:
+            G.sharedBoss = None
     G.land = D(f=f, t=0.0, d0=G.hook.d)
     G.card = D(rec=rec, sp=f.sp, tier=f.tier, isNew=isNew, t=0.0, extra=extra, size=sizeWord(f.sp, f.kg), xp=xp,
                lvl=P.level, up=P.level > lvl0, xpNow=P.xp, xpNeed=xpNeed(P.level))

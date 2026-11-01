@@ -91,7 +91,7 @@ def send(act):
         arg = Wd.P.biome
     to = PS.target
     me = online.st.user if online.active() else Wd.P.name
-    if act in ('mythic', 'limited') and online.connected():
+    if act in ('mythic', 'limited', 'boss') and online.connected():
         target = me if to == 'me' else to
         online.admin_send(act, target, arg)
         who = 'you' if to == 'me' else ('everyone' if to == '*' else to)

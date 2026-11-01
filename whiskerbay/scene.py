@@ -97,13 +97,37 @@ def _reel_for(f):
     return R if (R is not None and G.mode == 'reel' and R.f is f) else None
 
 
+def _layout_fish_names(names, size, width, height):
+    placed = []
+    occupied = []
+    step = size + 4
+    offsets = (0, -1, 1, -2, 2, -3, 3)
+    for x, y, label, colour, tier, hooked in sorted(
+            names, key=lambda item: (not item[5], -item[4], item[1])):
+        label_width = ui.text_w(label, 'x', size)
+        half_width = label_width / 2
+        for offset in offsets:
+            baseline = y + offset * step
+            left, right = x - half_width, x + half_width
+            top, bottom = baseline - size, baseline + 2
+            if left < 0 or right > width or top < 0 or bottom > height:
+                continue
+            if any(left < r and right > l and top < b and bottom > t
+                   for l, t, r, b in occupied):
+                continue
+            placed.append((x, baseline, label, colour))
+            occupied.append((left, top, right, bottom))
+            break
+    return placed
+
+
 def draw_fishes(c):
     P = Wd.P
     sonar = G.stats.sonar
     W, H, t = G.W, G.H, G.t
     surf_y = sy(0)
     names = []
-    for f in G.fish:
+    for f in sorted(G.fish, key=lambda fish: (fish.state == 'hooked', -fish.d)):
         x, y = f.x, sy(f.d)
         if y < surf_y - 20 or y > H + f.size * 1.5 or x < -f.size * 1.2 or x > W + f.size * 1.2:
             continue
@@ -143,9 +167,11 @@ def draw_fishes(c):
         if R is not None:
             hooked_fx(c, R, x, y, size)
         if sonar >= 2 and not sil and SET.get('sonarNames', True) and not (sonar >= 3 and f.tier >= 4 and not hooked):
-            names.append((x, y - f.size * 0.42 - 6, (MUT[f.mut].name + ' ' if f.mut else '') + sp.name, RAR[f.tier].col))
-    for x, y, txt, col in names:
-        ui.text(c, txt, x, y, 'x', max(10, int(11 * max(0.85, G.S))), col, 'center', 'baseline', outline=2, ocol=(0, 0, 0, 120))
+            names.append((x, y - f.size * 0.42 - 6, (MUT[f.mut].name + ' ' if f.mut else '') + sp.name,
+                          RAR[f.tier].col, f.tier, hooked))
+    label_size = max(10, int(11 * max(0.85, G.S)))
+    for x, y, txt, col in _layout_fish_names(names, label_size, W, H):
+        ui.text(c, txt, x, y, 'x', label_size, col, 'center', 'baseline', outline=2, ocol=(0, 0, 0, 120))
 
 
 def _eff_alpha(R, g, fade_in=0.25, fade_out=0.45):
@@ -301,10 +327,20 @@ def draw_floats(c):
 # ===================================================================================
 #  The line and the hook
 # ===================================================================================
-def draw_line_for(c, tip, mode, hx, hd, hold, bait_col):
+def _quadratic_points(p0, p1, p2, steps):
+    points = []
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        points.append((u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+                       u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]))
+    return points
+
+
+def draw_line_for(c, tip, mode, hx, hd, hold, bait_col, tension=0.0, hook_vx=0.0, hook_vd=0.0):
     """Draw a fishing line from a rod tip. Used for you and for other anglers."""
     Sc = G.S
-    if mode in ('idle', 'charge', 'card', 'sail') or hd < 0:
+    if mode in ('idle', 'charge', 'card', 'sail') or (hd < 0 and mode != 'flying'):
         swing = math.sin(G.t * 2) * 6 * Sc
         x, y = tip[0] + swing, tip[1] + 42 * Sc
         pygame.draw.aaline(c, (225, 235, 245), tip, (x, y))
@@ -313,26 +349,34 @@ def draw_line_for(c, tip, mode, hx, hd, hold, bait_col):
     hy, wy = sy(hd), sy(0)
     taut = mode in ('reel', 'landing', 'bite')
     col = (250, 252, 255) if taut else (215, 228, 240)
-    pts = []
-    if hd <= 0:
-        cx, cy = (tip[0] + hx) / 2, max(tip[1], hy) + 20
-        p0, p1, p2 = tip, (cx, cy), (hx, hy)
+    if mode == 'flying' or hd <= 0:
+        distance = math.hypot(hx - tip[0], hy - tip[1])
+        speed = math.hypot(hook_vx, hook_vd * G.PPM)
+        tautness = clamp(speed / (700 * Sc), 0, 0.82) if mode == 'flying' else 0.25
+        sag = min(42 * Sc, distance * 0.07) * (1 - tautness)
+        lag = clamp(-hook_vx * 0.025, -28 * Sc, 28 * Sc) * (1 - tautness)
+        p1 = ((tip[0] + hx) * 0.5 + lag, (tip[1] + hy) * 0.5 + sag)
+        pts = _quadratic_points(tip, p1, (hx, hy), 18)
     else:
-        p0, p1, p2 = tip, (lerp(tip[0], hx, 0.6), lerp(tip[1], wy, 0.7) if taut else wy + 8), (hx, wy)
-    for i in range(17):
-        tt = i / 16
-        u = 1 - tt
-        pts.append((u * u * p0[0] + 2 * u * tt * p1[0] + tt * tt * p2[0], u * u * p0[1] + 2 * u * tt * p1[1] + tt * tt * p2[1]))
-    if hd > 0:
+        surface_t = clamp((wy - tip[1]) / (hy - tip[1]), 0, 1) if hy > tip[1] else 0.6
+        sx = lerp(tip[0], hx, surface_t)
+        surface = (sx, wy)
+        above = _quadratic_points(tip, (lerp(tip[0], sx, 0.6), lerp(tip[1], wy, 0.7) + 3 * Sc), surface, 8)
+        tension = clamp(tension, 0, 1)
+        water_length = math.hypot(hx - sx, hy - wy)
+        slack = 1 - tension
+        sag = min(80 * Sc, water_length * 0.12) * slack
+        drift_x = clamp(-hook_vx * 0.04, -40 * Sc, 40 * Sc) * slack
+        drift_y = clamp(-hook_vd * G.PPM * 0.015, -30 * Sc, 30 * Sc) * slack
+        control = ((sx + hx) * 0.5 + drift_x, (wy + hy) * 0.5 + sag + drift_y)
+        pts = above + _quadratic_points(surface, control, (hx, hy), 14)[1:]
         if taut and mode == 'reel':
-            vib = math.sin(G.t * 60) * 1.2
-            mx, my = (hx + pts[-1][0]) / 2 + vib, (hy + wy) / 2
-            pts.append((mx, my))
-        pts.append((hx, hy))
+            vib = math.sin(G.t * 60) * (0.4 + tension * 1.2) * Sc
+            pts[len(above) + 6] = (pts[len(above) + 6][0] + vib, pts[len(above) + 6][1])
     pygame.draw.aalines(c, col, False, pts)
     if taut:
         pygame.draw.aalines(c, col, False, [(px + 0.6, py) for px, py in pts])
-    if hd > 0:
+    if not (mode == 'flying' or hd <= 0):
         by = wy + math.sin(G.t * 3) * 2 + (math.sin(G.t * 30) * 4 if mode == 'bite' else 0)
         pen = Pen(c, aa=True)
         pen.begin()
@@ -364,7 +408,10 @@ def draw_hook_icon(c, x, y, bait_col):
 
 def draw_line(c):
     b = G.stats.bait if G.stats else None
-    draw_line_for(c, Wd.rodTip(), G.mode, G.hook.x, G.hook.d, G.hook.hold, b.dot if b else None)
+    tension = G.reel.ten if G.mode == 'reel' and G.reel else (0.25 if G.mode in ('bite', 'landing') else 0.0)
+    moving = G.mode in ('flying', 'sinking', 'recall', 'burned')
+    draw_line_for(c, Wd.rodTip(), G.mode, G.hook.x, G.hook.d, G.hook.hold, b.dot if b else None,
+                  tension, G.hook.vx if moving else 0.0, G.hook.vd if moving else 0.0)
 
 
 # ===================================================================================
@@ -645,7 +692,7 @@ def draw_peer_lines(c, peers):
     for p in peers:
         if p.tip is None:
             continue
-        draw_line_for(c, p.tip, p.mode, p.hx * G.W, p.hd, False, None)
+        draw_line_for(c, p.tip, p.mode, p.hx * G.W, p.hd, False, None, p.ten)
 
 
 def draw_name_tags(c, peers):
@@ -838,7 +885,8 @@ def draw_reel(c):
     top = H - 52 - ph
     tier = R.f.tier
     col = RAR[tier].col
-    edge = '#00ffd5' if R.boss else col
+    boss_info = BOSSES.get(R.sp.b) if R.boss else None
+    edge = boss_info.eyes if boss_info else col
     gl = _cache.get(('reelglow', int(w), edge))
     if gl is None:
         gl = pygame.Surface((int(w) + 96, ph + 60), pygame.SRCALPHA)
@@ -856,7 +904,7 @@ def draw_reel(c):
     ui.text(c, title, x, top + 30, 'd', 21, col, 'left', 'baseline', outline=2, ocol=(0, 0, 0, 120))
     tx = x + ui.text_w(title, 'd', 21) + 12
     if R.boss:
-        ui.text(c, f'STAGE {R.stage} / {R.stages}', tx, top + 28, 'k', 12, '#00ffd5', 'left', 'baseline')
+        ui.text(c, f'STAGE {R.stage} / {R.stages}', tx, top + 28, 'k', 12, edge, 'left', 'baseline')
     elif R.perfect and R.t > R.grace:
         ui.text(c, 'PERFECT', tx, top + 28, 'k', 12, ui.SAND, 'left', 'baseline')
     lab = REEL[tier].label
