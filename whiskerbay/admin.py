@@ -31,6 +31,8 @@ TROLL = [
     ('slip', 'Make it slip', 'Knocks 35% off the fish they are reeling'),
     ('reverse', 'Reverse controls', 'Reel and steering flipped for 12 s'),
     ('zoomies', 'Fish zoomies', 'Fish swim 2.6x faster for 15 s'),
+    ('mythic', 'Spawn Mythic', 'A random island Mythic appears for everyone online there.'),
+    ('limited', 'Spawn limited fish', 'Uses server stock online; offline spawns are test copies.'),
     ('boss', 'Summon boss', "Their island's boss appears at their hook"),
 ]
 HELP = [
@@ -89,6 +91,14 @@ def send(act):
         arg = Wd.P.biome
     to = PS.target
     me = online.st.user if online.active() else Wd.P.name
+    if act in ('mythic', 'limited') and online.connected():
+        target = me if to == 'me' else to
+        online.admin_send(act, target, arg)
+        who = 'you' if to == 'me' else ('everyone' if to == '*' else to)
+        PS.sent = f'{NAMES.get(act, act)} -> {who}'
+        PS.sentT = 2.5
+        Sfx.play('coin')
+        return
     if to == 'me' or not online.connected():
         if act == 'pull':
             Wd.toast('You are already on your own island.', '')
@@ -178,6 +188,10 @@ def effect(act, arg, frm):
         Sfx.play('ab_frenzy')
     elif act == 'boss':
         summon_boss(frm)
+    elif act == 'mythic':
+        summon_mythic(frm)
+    elif act == 'limited':
+        summon_limited_local(frm)
     elif act == 'say':
         banner(str(arg or '')[:80], f'from {frm}', SAND)
         Sfx.play('chime')
@@ -251,6 +265,43 @@ def summon_boss(frm):
     Wd.toast(f'{frm} summoned {Wd.bossName(B.fish)}!', 'gold')
     Sfx.play('roar')
     Wd.shake(14)
+
+
+def summon_mythic(frm):
+    p = Wd.P
+    pool = [sp for sp in Wd.islandFish(p.biome, 5) if not getattr(sp, 'limited', 0)]
+    if not pool:
+        Wd.toast(f'There are no regular Mythic fish in {BIOMES[p.biome].name}.', 'bad')
+        return
+    sp = random.choice(pool)
+    depth = clamp(G.hook.d if G.hook.d > 0 else sp.dz, 10, BIOMES[p.biome].depth - 10)
+    f = Wd.spawnFish(False, force=sp, at=depth)
+    if not f:
+        Wd.toast('Could not spawn that Mythic right now.', 'bad')
+        return
+    f.x = clamp(G.hook.x + random.choice((-1, 1)) * 260 * G.S, 40, G.W - 40)
+    f.dir = 1 if f.x < G.hook.x else -1
+    f.seen = True
+    Wd.toast(f'{frm} summoned a {sp.name}!', 'gold')
+    Sfx.play('roar')
+
+
+def summon_limited_local(frm):
+    pool = [sp for sp in FISH if sp.b == Wd.P.biome and sp.r == 'mythic' and getattr(sp, 'limited', 0)]
+    if not pool:
+        Wd.toast(f'There are no limited Mythic fish in {BIOMES[Wd.P.biome].name}.', 'bad')
+        return
+    sp = random.choice(pool)
+    depth = clamp(G.hook.d if G.hook.d > 0 else sp.dz, 10, BIOMES[Wd.P.biome].depth - 10)
+    f = Wd.spawnFish(False, force=sp, at=depth)
+    if not f:
+        Wd.toast('Could not spawn that limited fish right now.', 'bad')
+        return
+    f.x = clamp(G.hook.x + random.choice((-1, 1)) * 260 * G.S, 40, G.W - 40)
+    f.dir = 1 if f.x < G.hook.x else -1
+    f.seen = True
+    Wd.toast(f'{frm} spawned a local test copy of {sp.name}; it does not use a server catch.', 'gold')
+    Sfx.play('roar')
 
 
 def banner(text_, sub, col):

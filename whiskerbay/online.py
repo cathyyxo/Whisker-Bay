@@ -11,7 +11,7 @@ from .data import BIOMES, BOSSES, EMOTES, RAR
 from .settings import SET, save_settings
 from .util import D
 
-PROTO = 6
+PROTO = 7
 conn = None
 st = D(phase='off', server='', host='', port=7777, user='', token=None, remember=False, error='', status='',
        motd='', srvname='', needCode=False, kicked='', cloud=None, newangler=False, ping=None, admin=False)
@@ -419,6 +419,12 @@ def _handle(m):
         text = f'{m.get("n") or "An angler"} caught {fish_name}! {remaining} remain on this server.'
         add_chat('', text, 'ann', '#ffe08a')
         Wd.toast(text, 'gold')
+    elif t == 'admin_spawn_result':
+        fish_name = str(m.get('fish') or 'a fish')[:48]
+        if m.get('ok'):
+            Wd.toast(f'{fish_name} spawned for {m.get("island") or "the island"}!', 'gold')
+        else:
+            Wd.toast(str(m.get('msg') or 'That admin spawn could not be completed.')[:120], 'bad')
     elif t == 'boss_claim':
         if not m.get('ok'):
             Wd.sharedBossDenied()

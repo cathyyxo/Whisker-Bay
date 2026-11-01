@@ -18,7 +18,7 @@ ROOT_FILES = (
     'Start Server.command',
     'start_server.sh',
     'updater.py',
-    'WHATS NEW 1.6.0.txt',
+    'WHATS NEW 1.7.0.txt',
 )
 SERVER_SETTINGS = {
     '_how_to': 'Optional: set an invite code here before starting the server. Default port matches the game client.',

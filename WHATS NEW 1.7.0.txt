@@ -1,0 +1,31 @@
+WHISKER BAY 1.7.0 - THE BIG FISHING & POLISH UPDATE
+
+FISHING
+- Later islands are still challenging, but the reel bar, line tension and
+  catch pacing have been rebalanced to feel fairer with stronger rods.
+- Mythic and boss fights now draw from larger trick pools. You will face
+  three to five different active tricks, and each trick has its own cooldown.
+- Two new mutations can appear: Stormbound and Moonlit. Catch more of each
+  mutation to unlock its upgrade bonuses.
+
+NEW GEAR
+- Coral Cat Collar: fish bite sooner.
+- Moonbell Anklet: line tension builds more slowly.
+- Keeper's Pearl Charm: improves luck and mutation odds.
+- Accessory cards show their island unlock and equipped status.
+
+ADMIN TOOLS
+- Admins can summon a random regular Mythic for an island.
+- Admins can spawn a limited Mythic, but only when server stock remains.
+  The fish is shared with everyone on that island and a catch uses one
+  server-wide copy, which remains tracked across restarts.
+- Offline limited spawns are labelled as local test copies and do not use
+  any server inventory.
+
+QUALITY OF LIFE
+- Surge is now F by default; Fishpedia is G. Existing custom bindings stay
+  as they were, and the old default bindings migrate automatically.
+- Update notes open once after an update and can always be revisited from
+  Settings > What's New or the title screen.
+- Multiplayer protocol is now version 7. The host server and all players
+  need the same 1.7.0 build.

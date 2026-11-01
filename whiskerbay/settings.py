@@ -69,6 +69,7 @@ DEFAULTS = {
     'user': '',
     'remember': None,   # {'server', 'user', 'token'} when "keep me logged in" is on
     'chatFade': True,
+    'seenPatchNotes': None,
 }
 
 
@@ -84,6 +85,9 @@ def _load():
         for a, keys in saved.items():
             if a in binds and isinstance(keys, list):
                 binds[a] = [k for k in keys if isinstance(k, str)][:2]
+        if saved.get('skill') == ['z'] and saved.get('dex') == ['f']:
+            binds['skill'] = list(DEFAULT_KEYS['skill'])
+            binds['dex'] = list(DEFAULT_KEYS['dex'])
         # actions added in a newer version keep their default keys only if nothing else already uses them
         used = {k for a, keys in saved.items() if a in binds for k in binds[a]}
         for a in binds:

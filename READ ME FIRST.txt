@@ -1,9 +1,26 @@
 =====================================================================
-  WHISKER BAY  -  Python edition, version 1.6.0
+  WHISKER BAY  -  Python edition, version 1.7.0
   A cat, a boat, and a chain of islands full of fish that really
   don't want to be caught. A real program, with online multiplayer that you
   and your friends host yourselves.
 =====================================================================
+
+---------------------------------------------------------------------
+ NEW IN 1.7.0: THE BIG FISHING & POLISH UPDATE
+---------------------------------------------------------------------
+
+ - Fish on later islands are still challenging, but the reel pacing,
+   bar width and line tension have been rebalanced.
+ - Mythic and boss fights draw different tricks from larger pools, with
+   separate cooldowns for each trick.
+ - Stormbound and Moonlit mutations, plus three new cat accessories,
+   give you more goals to chase.
+ - Admins can spawn a shared island Mythic or a limited fish. Limited
+   spawns are checked against the server's remaining stock.
+ - Surge is F by default; Fishpedia is G. Custom controls are preserved.
+ - Patch notes appear once after an update and are always in Settings >
+   What's New or on the title screen.
+ - The host server and every player need the same 1.7.0 game build.
 
 ---------------------------------------------------------------------
  NEW IN 1.5.2: POLISH PASS AND RELEASE CLEANUP
@@ -245,7 +262,8 @@
    Reel bar ............... hold to push your bar right, let go to
                             slide left; keep the fish inside it
    Q or right-click ....... use your rod ability (when it says READY)
-   B bag (and pets)   E shop   M sea chart   F Fishpedia   J quests
+   B bag (and pets)   E shop   M sea chart   G Fishpedia   J quests
+   F Surge (rod skill)
    Esc settings
    F11 fullscreen (you can also just drag the window bigger)
 
@@ -394,7 +412,7 @@
  - The server trusts the game it talks to, so it's made for
    friends, not strangers. Use an invite code if the server is
    reachable from the internet.
- - The Fishpedia (F) shows how hard each fish is to reel in, and
+ - The Fishpedia (G) shows how hard each fish is to reel in, and
    the tricks of every fish you've caught.
 
 

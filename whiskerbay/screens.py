@@ -54,6 +54,7 @@ class _State:
         self.rolling = None
         self.altar_target = None
         self.patch_notes = False
+        self.patch_scroll = Scroll()
         self.slider = Slider()
         self.title_scroll = Scroll()
         self.fps = 0.0
@@ -429,6 +430,8 @@ def card(c, rect, ic, title, desc='', stats=None, buttons=(), equip=False, locke
     r = pygame.Rect(rect)
     a = 0.55 if locked else 1.0
     box(c, r, (20, 58, 95, 140), SEA if equip else (43, 90, 132, 204), 14, 2 if equip else 1, alpha=a)
+    pygame.draw.line(c, (96, 174, 208) if equip else (50, 91, 125),
+                     (r.x + 16, r.y + 2), (r.right - 16, r.y + 2), 1)
     ib = pygame.Rect(r.x + 12, r.y + 12, 56, 56)
     box(c, ib, (7, 26, 46, 166), None, 12, alpha=a)
     if isinstance(ic, pygame.Surface):
@@ -607,7 +610,7 @@ def panel_tabs(pn):
         islands = [(b, BIOMES[b].short) for b in BIOME_IDS if not BIOMES[b].portal or p.unlocked.get(b)]
         return islands + [('odds', 'Odds'), ('logs', 'Keeper’s Logs')]
     if k == 'settings':
-        return [('saves', 'Saves'), ('controls', 'Controls'), ('sound', 'Sound & display')]
+        return [('saves', 'Saves'), ('controls', 'Controls'), ('sound', 'Sound & display'), ('updates', 'What’s New')]
     if k == 'players':
         return [('online', 'Online now'), ('boards', 'Leaderboards')]
     return None
@@ -866,15 +869,20 @@ def panel_shop(c, body, y, dt):
         def item(c, r, g):
             own = bool(p.gear.get(g.id))
             needOk = not g.need or p.gear.get(g.need)
+            atOk = not g.get('at') or p.unlocked.get(g.at)
             if own:
-                btn = ('Owned', '', True, lambda: None)
+                btn = ('Equipped' if g.get('accessory') else 'Owned', '', True, lambda: None)
             else:
                 def buy(g=g):
                     if spend(g.price):
                         p.gear[g.id] = True
                         Wd.saveProfile()
-                btn = (f'Buy {fmt(g.price)}' if needOk else f'Needs {GEARI[g.need].name}', 'go', not needOk, buy)
-            card(c, r, (g.icon, FOAM), g.name, g.desc, None, [btn], equip=own, clip=body)
+                label = (f'Opens at {BIOMES[g.at].name}' if not atOk else
+                         f'Needs {GEARI[g.need].name}' if not needOk else f'Buy {fmt(g.price)}')
+                btn = (label, 'go', not (needOk and atOk), buy)
+            tags = [('CAT ACCESSORY', SAND)] if g.get('accessory') else None
+            card(c, r, (g.icon, FOAM), g.name, g.desc, None, [btn], equip=own, locked=not atOk, clip=body,
+                 tag_items=tags)
         return grid(c, body, y, GEAR, item, card_h=130)
     if t == 'bait':
         def item(c, r, b):
@@ -1550,6 +1558,17 @@ def panel_settings(c, body, y, dt):
         yy += 50
         text(c, 'Emotes (online): ' + '   '.join(f'{i + 1} = {e.text}' for i, e in enumerate(EMOTES)), body.x, yy, 'x', 13, MIST)
         return yy + 30 - y
+    if tab == 'updates':
+        yy = y + para(c, 'These are the current release notes. They also appear once automatically after each game update.', body.x, y, body.w)
+        yy += 10
+        for note in PATCH_NOTES:
+            lines = wrap(note, 'b', 14, body.w - 24)
+            text(c, '•', body.x + 2, yy, 'k', 15, SAND)
+            for line in lines:
+                text(c, line, body.x + 22, yy, 'b', 14, FOAM)
+                yy += 19
+            yy += 9
+        return yy - y
     # sound & display
     yy = y
     text(c, 'Volume', body.x + 4, yy + 10, 'k', 15)
@@ -1896,13 +1915,24 @@ def draw_patch_notes(c):
     ui.overlay(c, (2, 8, 16), 0.72)
     box(c, overlay, (13, 36, 67, 210), (18, 46, 80, 220), 18)
     text(c, 'Patch notes', overlay.centerx, overlay.y + 28, 'd', 28, SAND, 'center')
-    y = overlay.y + 64
+    text(c, 'Scroll to read every update', overlay.centerx, overlay.y + 50, 'x', 12, MIST, 'center')
+    inner = pygame.Rect(overlay.x + 18, overlay.y + 72, overlay.w - 42, overlay.h - 128)
+    content_h = 0
     for note in PATCH_NOTES:
-        text(c, '•', overlay.x + 16, y + 5, 'k', 14, SAND)
-        for ln in wrap(note, 'b', 13, overlay.w - 54):
-            text(c, ln, overlay.x + 34, y, 'b', 13, FOAM)
+        content_h += len(wrap(note, 'b', 13, inner.w - 28)) * 18 + 8
+    S.patch_scroll.content = content_h
+    off = S.patch_scroll.update(inner)
+    old_clip = c.get_clip()
+    c.set_clip(inner)
+    y = inner.y - off
+    for note in PATCH_NOTES:
+        text(c, '•', inner.x + 2, y + 4, 'k', 14, SAND)
+        for ln in wrap(note, 'b', 13, inner.w - 28):
+            text(c, ln, inner.x + 22, y, 'b', 13, FOAM)
             y += 18
         y += 8
+    c.set_clip(old_clip)
+    S.patch_scroll.bar(c, inner)
     if button(c, (overlay.right - 132, overlay.bottom - 44, 116, 36), 'Close', 'go', clip=overlay):
         S.patch_notes = False
 
@@ -1927,9 +1957,13 @@ def draw_title(c, dt):
         _cache['title'] = ts
     c.blit(ts, (W / 2 - ts.get_width() / 2, 2))
     text(c, "A cat, a boat, and four islands of fish that really don't want to be caught.", W / 2, 140, 'x', 16, FOAM, 'center', outline=2, ocol=(0, 0, 0, 140))
+    from . import __version__
+    if not S.patch_notes and SET.get('seenPatchNotes') != __version__:
+        S.patch_notes = True
+        SET['seenPatchNotes'] = __version__
+        save_settings()
     if button(c, (W - 146, 20, 120, 28), 'Patch notes', 'tabon'):
         S.patch_notes = True
-    from . import __version__
     text(c, f'v{__version__}', W - 12, H - 10, 'x', 12, (234, 246, 255, 150), 'right', 'bottom', outline=2, ocol=(0, 0, 0, 120))
     if S.patch_notes:
         draw_patch_notes(c)

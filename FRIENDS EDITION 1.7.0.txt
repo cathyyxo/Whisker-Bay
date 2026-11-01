@@ -1,0 +1,23 @@
+WHISKER BAY 1.7.0 - FRIENDS EDITION
+
+This is a clean, portable copy of the complete game and multiplayer server.
+It does not include anyone's existing saves or server accounts. The game
+creates fresh data the first time it runs.
+
+WINDOWS
+1. Extract the whole ZIP to a normal folder (do not run it from inside the ZIP).
+2. Install Python 3.8 or newer if it is not already installed. On Windows,
+   enable "Add python.exe to PATH" during setup.
+3. Double-click "Play Whisker Bay.bat". The first launch installs pygame-ce
+   and needs an internet connection.
+
+PLAY WITH FRIENDS
+1. One person starts "Start Server.bat" and allows it through the firewall
+   if asked.
+2. The host starts the game and connects to localhost:7777.
+3. Friends connect to the host computer's address followed by :7777.
+4. Keep the server window open. The host server and all players must use the
+   same game build. Shared limited-fish catches are saved by the server.
+
+See "READ ME FIRST.txt" for setup and troubleshooting, and
+"WHATS NEW 1.7.0.txt" for the update highlights.

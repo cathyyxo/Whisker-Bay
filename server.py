@@ -26,7 +26,7 @@ import tempfile
 import threading
 import time
 
-PROTO = 6
+PROTO = 7
 MAX_LINE = 1_000_000          # biggest message we accept (a save is usually well under 100 KB)
 MAX_SAVE = 600_000
 PBKDF2_ITER = 200_000
@@ -64,6 +64,8 @@ try:
     ISLAND_NAMES = {b: _gd.BIOMES[b].name for b in _gd.BIOME_IDS}
     RARITY = [r.name for r in _gd.RAR]
     BOSS_NAMES = {b: _gd.FI[x.fish].name for b, x in _gd.BOSSES.items()}
+    MUTS = {m.id: m.name for m in _gd.MUTS}
+    LIMITED_FISH = {f.id: int(f.limited) for f in _gd.FISH if getattr(f, 'limited', 0)}
 except Exception:  # an old or missing game folder: fall back to the built-in names
     pass
 
@@ -611,11 +613,57 @@ class Server:
         if to == '*':
             targets = [o for o in self.players() if o is not c]
         else:
-            o = self.by_name.get(to.lower())
+            o = c if to.lower() == 'me' else self.by_name.get(to.lower())
             targets = [o] if o else []
+        if act in ('mythic', 'limited'):
+            if not targets:
+                c.send({'t': 'admin_spawn_result', 'act': act, 'ok': False,
+                        'msg': 'That player is not online.'})
+                return
+            biomes = {}
+            for target in targets:
+                biome = (target.state or {}).get('b')
+                if biome:
+                    biomes.setdefault(biome, target)
+            if not biomes:
+                c.send({'t': 'admin_spawn_result', 'act': act, 'ok': False,
+                        'msg': 'That player has not entered an island yet.'})
+                return
+            for biome in biomes:
+                self.spawn_admin_fish(c, biome, act)
+            log(f'[admin] {c.name}: {act} -> {to} ({len(biomes)} island(s))')
+            return
         for o in targets:
             o.send({'t': 'adm', 'act': act, 'arg': arg, 'from': c.name})
         log(f'[admin] {c.name}: {act} -> {to} ({len(targets)} player(s)){" " + str(arg) if arg not in (None, "") else ""}')
+
+    def spawn_admin_fish(self, admin, biome, act):
+        if not _gd:
+            admin.send({'t': 'admin_spawn_result', 'act': act, 'ok': False,
+                        'msg': 'The server game data is unavailable.'})
+            return
+        if biome in self.shared_fish or time.time() < self.shared_respawn.get(biome, 0):
+            admin.send({'t': 'admin_spawn_result', 'act': act, 'ok': False,
+                        'msg': 'That island already has a shared Mythic or is waiting for one to return.'})
+            return
+        species = [f for f in _gd.FISH if f.b == biome and f.r == 'mythic' and
+                   (bool(getattr(f, 'limited', 0)) == (act == 'limited'))]
+        if act == 'limited':
+            species = [f for f in species if self.limited_remaining.get(f.id, 0) > 0]
+        if not species:
+            message = ('No limited catches remain for this island.' if act == 'limited' else
+                       'There are no regular Mythic fish on this island.')
+            admin.send({'t': 'admin_spawn_result', 'act': act, 'ok': False, 'msg': message})
+            return
+        sp = random.choice(species)
+        self.shared_fish[biome] = {
+            'id': secrets.token_urlsafe(12), 'b': biome, 'sp': sp.id, 'd': float(sp.dz),
+            'kg': random.uniform(float(sp.w[0]), float(sp.w[1])), 'x': round(random.uniform(0.2, 0.8), 3),
+            'mut': None, 'owner': None,
+        }
+        self.broadcast_shared_fish(biome)
+        admin.send({'t': 'admin_spawn_result', 'act': act, 'ok': True, 'fish': sp.name,
+                    'island': ISLAND_NAMES.get(biome, biome)})
 
     def on_catch(self, c, m):
         sp = m.get('sp') if m.get('sp') in FISH_NAMES else None
@@ -759,8 +807,8 @@ SETTINGS_DEFAULT = {
     'admin_code': '',
 }
 # the things an admin can do to players (the game on their side carries them out)
-ADMIN_ACTS = {'scare', 'fakeleg', 'fishrain', 'flip', 'disco', 'honk', 'storm', 'scatter', 'slip', 'reverse', 'zoomies', 'boss',
-              'say', 'coins', 'xp', 'lures', 'mats', 'rods', 'unlock', 'pull'}
+ADMIN_ACTS = {'scare', 'fakeleg', 'fishrain', 'flip', 'disco', 'honk', 'storm', 'scatter', 'slip', 'reverse', 'zoomies',
+              'mythic', 'limited', 'boss', 'say', 'coins', 'xp', 'lures', 'mats', 'rods', 'unlock', 'pull'}
 
 
 def load_settings():

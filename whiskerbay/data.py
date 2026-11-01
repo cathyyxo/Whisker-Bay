@@ -27,6 +27,8 @@ MUTS = [
     T(id='corrupted', name='Corrupted', mult=10, chance=0.003, col='#b02bff', aura='smoke'),
     T(id='prismatic', name='Prismatic', mult=14, chance=0.0015, col='#ff9ad8', aura='glitter'),
     T(id='tideworn', name='Tideworn', mult=8, chance=0.004, col='#8ce1c4', aura='soft'),
+    T(id='stormbound', name='Stormbound', mult=11, chance=0.0025, col='#7cf0ff', aura='spark'),
+    T(id='moonlit', name='Moonlit', mult=16, chance=0.001, col='#d6c8ff', aura='soft'),
 ]
 MUT = {m.id: m for m in MUTS}
 MUT_UPGRADES = {
@@ -36,6 +38,8 @@ MUT_UPGRADES = {
     'corrupted': {'targets': [3, 10, 25], 'bonus': [1.12, 1.22, 1.35], 'desc': 'Corrupted catches have a stronger aura and better odds.'},
     'prismatic': {'targets': [3, 10, 25], 'bonus': [1.08, 1.18, 1.3], 'desc': 'Prismatic catches become more valuable.'},
     'tideworn': {'targets': [3, 10, 25], 'bonus': [1.1, 1.2, 1.32], 'desc': 'Tideworn fish bring better luck and value.'},
+    'stormbound': {'targets': [3, 10, 25], 'bonus': [1.1, 1.2, 1.32], 'desc': 'Stormbound catches bring more value and mutation luck.'},
+    'moonlit': {'targets': [3, 10, 25], 'bonus': [1.08, 1.18, 1.3], 'desc': 'Moonlit catches become rarer and more valuable.'},
 }
 
 # ---------------- Islands ----------------
@@ -80,15 +84,15 @@ BIOME_IDS = ['shore', 'reef', 'volcano', 'trench', 'loch', 'pallid', 'frost', 'm
 # when the fish slips out, ten: line tension. Later islands are tougher, and their rods are stronger.
 ISLE = {
     'shore': T(i=0, spd=1.0, zone=1.0, gain=1.0, loss=1.0, ten=1.0, xp=1.0),
-    'reef': T(i=1, spd=1.02, zone=0.89, gain=1.2, loss=1.08, ten=1.16, xp=1.8),
-    'volcano': T(i=2, spd=1.04, zone=0.84, gain=1.45, loss=1.16, ten=1.32, xp=4.0),
-    'trench': T(i=3, spd=1.06, zone=0.78, gain=1.72, loss=1.25, ten=1.5, xp=6.0),
-    'pallid': T(i=4, spd=1.07, zone=0.76, gain=1.95, loss=1.3, ten=1.65, xp=8.0),
-    'frost': T(i=5, spd=1.08, zone=0.74, gain=2.15, loss=1.35, ten=1.8, xp=10.0),
-    'mariana': T(i=7, spd=1.10, zone=0.72, gain=2.4, loss=1.4, ten=1.95, xp=13.0),
-    'loch': T(i=8, spd=1.06, zone=0.77, gain=1.8, loss=1.27, ten=1.55, xp=7.0),
-    'atlantis': T(i=9, spd=1.11, zone=0.70, gain=2.65, loss=1.45, ten=2.1, xp=16.0),
-    'redhollow': T(i=6, spd=1.09, zone=0.71, gain=2.5, loss=1.42, ten=2.0, xp=14.0),
+    'reef': T(i=1, spd=1.02, zone=0.91, gain=1.15, loss=1.06, ten=1.12, xp=1.8),
+    'volcano': T(i=2, spd=1.04, zone=0.87, gain=1.35, loss=1.12, ten=1.25, xp=4.0),
+    'trench': T(i=3, spd=1.06, zone=0.82, gain=1.55, loss=1.2, ten=1.4, xp=6.0),
+    'pallid': T(i=4, spd=1.07, zone=0.80, gain=1.7, loss=1.24, ten=1.52, xp=8.0),
+    'frost': T(i=5, spd=1.08, zone=0.79, gain=1.82, loss=1.28, ten=1.62, xp=10.0),
+    'mariana': T(i=7, spd=1.10, zone=0.77, gain=2.0, loss=1.32, ten=1.75, xp=13.0),
+    'loch': T(i=8, spd=1.06, zone=0.81, gain=1.6, loss=1.22, ten=1.45, xp=7.0),
+    'atlantis': T(i=9, spd=1.11, zone=0.76, gain=2.1, loss=1.36, ten=1.82, xp=16.0),
+    'redhollow': T(i=6, spd=1.09, zone=0.77, gain=2.0, loss=1.34, ten=1.75, xp=14.0),
 }
 
 # ---------------- Fish ----------------
@@ -352,8 +356,11 @@ GEAR = [
     T(id='lamp', name='Deep Lamp', price=18000, icon='lamp', desc='Lights a much wider circle in the trench.'),
     T(id='reel', name='Gold Reel', price=4000, icon='reel', desc='Catch progress fills 12% faster on every rod.'),
     T(id='charm', name='Ability Charm', price=12000, icon='charm', desc='Your rod ability charges 35% faster.'),
-    T(id='shellbracelet', name='Tidal Shell Bracelet', price=180000, at='pallid', icon='charm', desc='An accessory that steadies the line: tension builds 5% slower.'),
-    T(id='orichalcumcompass', name='Orichalcum Compass', price=1400000, at='mariana', icon='radar', desc='An accessory that points toward rare fish and adds 5% luck.'),
+    T(id='catcollar', name='Coral Cat Collar', price=2500, at='reef', icon='charm', accessory=True, desc='A bright reef-made collar. Fish bite 6% sooner.'),
+    T(id='shellbracelet', name='Tidal Shell Bracelet', price=180000, at='pallid', icon='charm', accessory=True, desc='An accessory that steadies the line: tension builds 5% slower.'),
+    T(id='moonbell', name='Moonbell Anklet', price=520000, at='frost', icon='charm', accessory=True, desc='A tiny bell from the ice shelf. Line tension builds 7% slower.'),
+    T(id='orichalcumcompass', name='Orichalcum Compass', price=1400000, at='mariana', icon='radar', accessory=True, desc='An accessory that points toward rare fish and adds 5% luck.'),
+    T(id='pearlcharm', name='Keeper’s Pearl Charm', price=2600000, at='atlantis', icon='charm', accessory=True, desc='A pearl from the old city: +6% luck and +5% mutation chance.'),
 ]
 GEARI = {g.id: g for g in GEAR}
 BAITS = [
@@ -389,6 +396,14 @@ ENCHANTS = [
 ENCH = {e.id: e for e in ENCHANTS}
 
 PATCH_NOTES = [
+    '1.7.0: Rarer fish move more deliberately, and later islands have fairer reel bars, tension and catch pacing.',
+    'Mythic and boss fights now draw varied tricks from larger move pools, with separate cooldowns so one trick cannot repeat back-to-back.',
+    'Admins can summon a random island Mythic or boss. Limited-fish spawns use the server inventory and remain shared with the island.',
+    'Meet two new mutations: Stormbound and Moonlit. Both can be upgraded as you catch more of them.',
+    'New cat accessories add bite speed, steadier lines, or extra luck. Their shop cards show when they unlock and what they do.',
+    'Patch notes now open automatically once after an update and remain available in Settings → What’s New.',
+    'Surge now uses F by default; Fishpedia moves to G. Existing custom keybinds are kept.',
+    'UI polish: clearer equipped/accessory tags, improved gear unlock labels and a more readable update-notes screen.',
     '1.6.0: Explore Atlantis and Red Hollow, discover new fish and gear, and challenge the Kraken and Watcher Below.',
     'Shared Mythic fish now appear consistently to everyone on the same island. The first angler to hook one claims it.',
     'Poseidon’s statue now opens the hidden portal after you recover the Broken Trident. The Red Hollow quest has two endings.',
@@ -430,8 +445,8 @@ FUR_REWARD = '#d84c73'
 # Key names are pygame key names (pygame.key.name).
 DEFAULT_KEYS = {
     'left': ['left', 'a'], 'right': ['right', 'd'], 'up': ['up', 'w'], 'down': ['down', 's'],
-    'act': ['space', 'return'], 'ability': ['q'], 'skill': ['z'], 'recall': ['r'], 'bait': ['v'], 'bag': ['b'], 'shop': ['e'], 'map': ['m'],
-    'dex': ['f'], 'quests': ['j'], 'chat': ['t'], 'players': ['tab'],
+    'act': ['space', 'return'], 'ability': ['q'], 'skill': ['f'], 'recall': ['r'], 'bait': ['v'], 'bag': ['b'], 'shop': ['e'], 'map': ['m'],
+    'dex': ['g'], 'quests': ['j'], 'chat': ['t'], 'players': ['tab'],
 }
 ACTION_NAMES = {
     'left': 'Sail / steer left', 'right': 'Sail / steer right', 'up': 'Reel the hook up',
@@ -466,20 +481,20 @@ REEL = [
 # ---------------- Fish gimmicks (tricks they pull on the reel bar) ----------------
 # kind: 'passive' tricks are always on; the rest trigger every few seconds, with a warning first.
 GIMMICKS = {
-    'dash': T(name='Dash', col='#7cf0ff', dur=0.6, desc='Bolts across the bar without warning.'),
-    'puff': T(name='Puff', col='#ffd23d', dur=2.2, desc='Puffs up and squeezes your bar smaller.'),
-    'ink': T(name='Ink', col='#8a6cff', dur=2.4, desc='Squirts ink that hides the fish.'),
-    'zap': T(name='Zap', col='#62f3ff', dur=0.7, desc='Shocks the line: tension jumps and your bar jitters.'),
-    'camo': T(name='Camouflage', col='#9fd3a8', dur=2.6, desc='Turns almost invisible for a few seconds.'),
-    'decoy': T(name='Decoy', col='#ff9a3c', dur=3.0, desc='Shows a fake fish. Only the real one counts.'),
-    'split': T(name='Split', col='#ffcf7a', dur=2.8, desc='Splits into three. Only one of them is real.'),
-    'flash': T(name='Flash', col='#ffffff', dur=0.8, desc='A blinding flash hides everything for a moment.'),
-    'regen': T(name='Regenerate', col='#ff8fcf', dur=2.0, desc='Heals itself, draining your progress for a moment.'),
-    'warp': T(name='Warp', col='#c26bff', dur=2.0, desc='Bends reality: holding moves your bar the wrong way.'),
-    'glitch': T(name='Glitch', col='#ff5ab0', dur=1.2, desc='The fractured water jumps your bar to a new position.'),
-    'burn': T(name='Scorch', col='#ff6a1a', dur=2.0, desc='Scorches the line so tension rises even inside your bar. Heat protection blocks it.'),
-    'stun': T(name='Venom', col='#e05a3a', dur=1.0, desc='Venom locks your bar in place for a second.'),
-    'sharp': T(name='Razor Teeth', col='#d6c8ff', dur=0.5, desc='Slashes at your line for a sudden tension spike.'),
+    'dash': T(name='Dash', col='#7cf0ff', dur=0.6, cool=6.0, desc='Bolts across the bar without warning.'),
+    'puff': T(name='Puff', col='#ffd23d', dur=2.2, cool=8.0, desc='Puffs up and squeezes your bar smaller.'),
+    'ink': T(name='Ink', col='#8a6cff', dur=2.4, cool=8.0, desc='Squirts ink that hides the fish.'),
+    'zap': T(name='Zap', col='#62f3ff', dur=0.7, cool=7.0, desc='Shocks the line: tension jumps and your bar jitters.'),
+    'camo': T(name='Camouflage', col='#9fd3a8', dur=2.6, cool=8.0, desc='Turns almost invisible for a few seconds.'),
+    'decoy': T(name='Decoy', col='#ff9a3c', dur=3.0, cool=9.0, desc='Shows a fake fish. Only the real one counts.'),
+    'split': T(name='Split', col='#ffcf7a', dur=2.8, cool=9.0, desc='Splits into three. Only one of them is real.'),
+    'flash': T(name='Flash', col='#ffffff', dur=0.8, cool=7.0, desc='A blinding flash hides everything for a moment.'),
+    'regen': T(name='Regenerate', col='#ff8fcf', dur=2.0, cool=9.0, desc='Heals itself, draining your progress for a moment.'),
+    'warp': T(name='Warp', col='#c26bff', dur=2.0, cool=8.0, desc='Bends reality: holding moves your bar the wrong way.'),
+    'glitch': T(name='Glitch', col='#ff5ab0', dur=1.2, cool=8.0, desc='The fractured water jumps your bar to a new position.'),
+    'burn': T(name='Scorch', col='#ff6a1a', dur=2.0, cool=9.0, desc='Scorches the line so tension rises even inside your bar. Heat protection blocks it.'),
+    'stun': T(name='Venom', col='#e05a3a', dur=1.0, cool=8.0, desc='Venom locks your bar in place for a second.'),
+    'sharp': T(name='Razor Teeth', col='#d6c8ff', dur=0.5, cool=7.0, desc='Slashes at your line for a sudden tension spike.'),
     'heavy': T(name='Heavy', col='#a8b4c0', kind='passive', desc='So heavy that your bar sinks back faster.'),
     'slippery': T(name='Slippery', col='#5aff8a', kind='passive', desc='Your progress drops much faster when it slips out.'),
     'thrash': T(name='Thrash', col='#ff6a6a', kind='passive', desc='Goes wild once it is more than half caught.'),
@@ -538,9 +553,14 @@ FISH_GIMS = {
 for _f in FISH:
     _f.gim = FISH_GIMS.get(_f.id, [])
 MUT_GIMS = {'electric': ['zap'], 'corrupted': ['warp'], 'gilded': ['slippery'],
-            'prismatic': ['flash'], 'tideworn': ['regen']}
-BOSS_STAGE_GIMS = {1: ['heavy', 'dash', 'ink'], 2: ['heavy', 'ink', 'zap', 'dash', 'sharp'],
-                   3: ['heavy', 'warp', 'flash', 'dash', 'regen']}
+            'prismatic': ['flash'],             'tideworn': ['regen'], 'stormbound': ['zap'], 'moonlit': ['flash']}
+MYTHIC_GIM_POOL = ['dash', 'puff', 'ink', 'zap', 'camo', 'decoy', 'split', 'flash', 'regen', 'warp',
+                   'glitch', 'burn', 'stun', 'sharp']
+BOSS_STAGE_GIMS = {
+            1: ['heavy', 'dash', 'ink', 'puff', 'camo', 'zap', 'sharp'],
+            2: ['heavy', 'ink', 'zap', 'dash', 'sharp', 'decoy', 'split', 'burn', 'stun'],
+            3: ['heavy', 'warp', 'flash', 'dash', 'regen', 'glitch', 'burn', 'stun', 'sharp', 'zap'],
+}
 
 # ---------------- Bosses (one per island from the Deep Trench on) ----------------
 # fish: the boss. lure: the bait that calls it. mat: what it drops (for that island's best rod).

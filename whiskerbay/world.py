@@ -6,7 +6,7 @@ import time
 
 from . import settings
 from .data import (ABILITIES, BAIT, BIOME_IDS, BIOMES, BOAT, BOATS, BOSS_STAGE_GIMS, BOSSES, CAVES, EGG, ENCH, FI, FISH, FUR_BONUSES,
-                   FUR_REWARD, FURS, GIMMICKS, ISLE, KEEPER_LOGS, KITTEN, MUT, MUT_GIMS, MUTS, PET, PET_DUPE_MIN,
+                   FUR_REWARD, FURS, GIMMICKS, ISLE, KEEPER_LOGS, KITTEN, MUT, MUT_GIMS, MUTS, MYTHIC_GIM_POOL, PET, PET_DUPE_MIN,
                    PET_LEVEL_MIN, PET_MAX, QI, QUEST_VERSION, MATS, QUESTS, RAR, REEL, RI, ROD, RODS, ROD_SKILL, SKILLS,
                    slice_amount)
 from .sfx import Sfx
@@ -399,18 +399,22 @@ def gearStats():
     fur = FUR_BONUSES.get(P.fur, D())
     page_bonus = 1.05 if bio in P.dexRewards else 1.0
     tidecaller = 1.2 if e == 'tidecaller' else 1.0
+    accessory_luck = (1.05 if P.gear.get('orichalcumcompass') else 1.0) * (1.06 if P.gear.get('pearlcharm') else 1.0)
+    accessory_mut = 1.05 if P.gear.get('pearlcharm') else 1.0
     return D(
         rod=r, ench=e, bait=bait, fish_bait=fish_bait, crew=crew, isle=ISLE[bio],
-        luck=r.luck * (1.3 if e == 'lucky' else 1) * (1.5 if e == 'mythical' else 1) * tidecaller * page_bonus * fur.get('luck', 1) * (bait.luck if bait else 1) * fish_bonus.luck * mut_bonus * crew * pw.luck,
+        luck=r.luck * (1.3 if e == 'lucky' else 1) * (1.5 if e == 'mythical' else 1) * tidecaller * page_bonus * accessory_luck * fur.get('luck', 1) * (bait.luck if bait else 1) * fish_bonus.luck * mut_bonus * crew * pw.luck,
         control=r.control * (1.18 if e == 'steady' else 1) * (1.1 if e == 'mythical' else 1) * fur.get('control', 1),
         reel=r.reel * (1.25 if e == 'swift' else 1) * (1.1 if e == 'mythical' else 1) * fur.get('reel', 1) * (1.12 if P.gear.get('reel') else 1),
-        str=r.str, tension=(0.6 if e == 'resilient' else 1) * pw.tension * fur.get('tension', 1) * (0.95 if P.gear.get('shellbracelet') else 1),
+        str=r.str, tension=(0.6 if e == 'resilient' else 1) * pw.tension * fur.get('tension', 1)
+        * (0.95 if P.gear.get('shellbracelet') else 1) * (0.93 if P.gear.get('moonbell') else 1),
         depth=min(BIOMES[bio].depth, jround(r.depth * (1.25 if e == 'diver' else 1))),
         heat=bool(r.heat or P.gear.get('shield') or e == 'blazing' or (bait and bait.heat)),
         light=1 + (0.5 if r.light else 0) + (1.2 if P.gear.get('lamp') else 0) + (0.6 if bait and bait.light else 0),
-        magnet=e == 'magnet', mut=(1.8 if e == 'fortune' else 1) * fur.get('mut', 1) * (bait.mut if bait and bait.mut else 1) * fish_bonus.mut * mut_bonus,
+        magnet=e == 'magnet', mut=(1.8 if e == 'fortune' else 1) * accessory_mut * fur.get('mut', 1) * (bait.mut if bait and bait.mut else 1) * fish_bonus.mut * mut_bonus,
         val=1.15 if e == 'fortune' else 1,
-        bite=r.lure * fur.get('bite', 1) * (bait.bite if bait else 1) * fish_bonus.bite * mut_bonus * pw.bite, boss=bait.boss if bait and bait.boss else 1,
+        bite=r.lure * fur.get('bite', 1) * (bait.bite if bait else 1) * fish_bonus.bite * mut_bonus
+        * (1.06 if P.gear.get('catcollar') else 1) * pw.bite, boss=bait.boss if bait and bait.boss else 1,
         notice=1.5 if e == 'magnet' else 1.0, chase=1.25 if e == 'magnet' else 1.0,
         hookV=pw.hookV * fur.get('hookV', 1), hookH=pw.hookH * fur.get('hookH', 1), rare=pw.rare, small=pw.small,
         sonar=3 if P.gear.get('sonar3') else 2 if P.gear.get('sonar2') else 1 if P.gear.get('sonar1') else 0,
@@ -1522,11 +1526,28 @@ def _reel_gims(R):
     """The tricks this fish can use right now (the Leviathan changes tricks every stage)."""
     if R.boss:
         B = BOSSES.get(R.sp.b)
-        return list((B.gims if B else BOSS_STAGE_GIMS).get(R.stage, []))
+        special = list(B.gims.get(R.stage, [])) if B else []
+        pool = list(dict.fromkeys(special + BOSS_STAGE_GIMS.get(R.stage, [])))
+        passive = [g for g in pool if GIMMICKS[g].kind == 'passive']
+        active = list(dict.fromkeys(g for g in pool if GIMMICKS[g].kind != 'passive'))
+        pool_size = max(6, {1: 7, 2: 9, 3: 10}.get(R.stage, 7) - len(passive))
+        if len(active) > pool_size:
+            active = random.sample(active, pool_size)
+        else:
+            additions = [g for g in MYTHIC_GIM_POOL if g not in active]
+            active.extend(random.sample(additions, min(pool_size - len(active), len(additions))))
+        return passive + random.sample(active, random.randint(3, min(5, len(active))))
     g = list(R.sp.gim or [])
     for x in (MUT_GIMS.get(R.f.mut, []) if R.f.mut else []):
         if x not in g:
             g.append(x)
+    if R.tier == 5:
+        passive = [x for x in g if GIMMICKS[x].kind == 'passive']
+        active = [x for x in g if GIMMICKS[x].kind != 'passive'][:5]
+        target = min(5, max(3, random.randint(3, 5), len(active)))
+        pool = [x for x in MYTHIC_GIM_POOL if x not in active and GIMMICKS[x].kind != 'passive']
+        active.extend(random.sample(pool, min(target - len(active), len(pool))))
+        return passive + active
     return g
 
 
@@ -1570,7 +1591,7 @@ def startReel(f):
                speed=T.speed * I.spd * size_k * (sp.rk or 1.0) * (1.06 if f.mut else 1)
                      / RARITY_REEL_SLOW[min(6, max(0, tier))], gain=T.gain / I.gain, loss=T.loss * I.loss,
                tenr=T.ten * I.ten * size_k,
-               gims=[], gimT=rand(2.8, 4.5), warn=None, eff=D(), decoys=[], reborn=False,
+               gims=[], gimT=rand(2.8, 4.5), gimCD=D(), warn=None, eff=D(), decoys=[], reborn=False,
                ab=S.rod.ab, charge=0.0, ready=False, abT=D(), label='', labelT=0.0, labelCol='#ffffff',
                slashT=0.0, flashT=0.0, zapT=0.0, pawT=0.0, harpT=0.0, starT=0.0, pingT=0.0, gold=False, saved=False,
                barb=False, chill=False)
@@ -1592,6 +1613,7 @@ def _trigger(R, g):
     """A fish trick goes off."""
     S = G.stats
     gm = GIMMICKS[g]
+    R.gimCD[g] = gm.get('cool', 6.0)
     R.eff[g] = gm.dur or 1.0
     _label(R, gm.name.upper() + '!', gm.col)
     if g == 'dash':
@@ -1745,6 +1767,10 @@ def reelTick(dt):
         R.abT[k] -= dt
         if R.abT[k] <= 0:
             del R.abT[k]
+    for k in list(R.gimCD):
+        R.gimCD[k] = max(0.0, R.gimCD[k] - dt)
+        if R.gimCD[k] <= 0:
+            del R.gimCD[k]
     for k in list(R.eff.keys()):
         R.eff[k] -= dt
         if R.eff[k] <= 0:
@@ -1769,10 +1795,14 @@ def reelTick(dt):
         else:
             R.gimT -= dt
             if R.gimT <= 0:
-                g = random.choice(timed)
-                R.warn = [g, (0.6 if g == 'dash' else 0.75) + (0.6 if R.abT.get('echo', 0) > 0 else 0)]
-                R.gimT = rand(3.6, 6.4) * (1.15 - 0.06 * R.tier) * (0.8 if R.boss and R.stage == 3 else 1)
-                Sfx.play('warn')
+                ready = [g for g in timed if R.gimCD.get(g, 0) <= 0]
+                if ready:
+                    g = random.choice(ready)
+                    R.warn = [g, (0.6 if g == 'dash' else 0.75) + (0.6 if R.abT.get('echo', 0) > 0 else 0)]
+                    R.gimT = rand(3.6, 6.4) * (1.15 - 0.06 * R.tier) * (0.8 if R.boss and R.stage == 3 else 1)
+                    Sfx.play('warn')
+                else:
+                    R.gimT = min(R.gimCD.get(g, 0.2) for g in timed)
     # --- your bar ---
     eff = R.eff
     heavy = 'heavy' in R.gims
@@ -1960,6 +1990,7 @@ def reelTick(dt):
             R.ten *= 0.4
             R.grace = R.t + 1.1
             R.gims = _reel_gims(R)
+            R.gimCD.clear()
             R.eff.clear()
             R.decoys = []
             R.warn = None
