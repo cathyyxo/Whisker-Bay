@@ -68,6 +68,5 @@ class UiTests(unittest.TestCase):
                             and top < other_bottom and bottom > other_top)
                 self.assertFalse(overlaps)
 
-
 if __name__ == '__main__':
     unittest.main()
