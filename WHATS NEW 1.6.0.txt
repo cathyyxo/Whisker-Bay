@@ -1,0 +1,34 @@
+WHISKER BAY 1.6.0 - ATLANTIS UPDATE
+
+Explore the Ruins of Atlantis, a new end-game island at 5,200 m. Reach
+level 38, complete the Mariana Deep island quest, and bring the
+Orichalcum Argo to sail there.
+
+ATLANTIS AND RED HOLLOW
+- Discover new Atlantis fish, rods, lures, gear, an enchantment, and
+  the Kraken boss.
+- Catch the Oracle Eel to reveal the Broken Trident quest.
+- Recover the three shards, claim the Trident, and return to Poseidon's
+  statue to open the Red Hollow portal.
+- Defeat the Watcher Below and choose whether to repair or seal the gate.
+- Keeper's Logs are collected while exploring and can be read in the
+  Fishpedia.
+- Discover the Lantern Grotto, Signal Vault, and Keeper's Archive.
+  Their rare fish stay inside each cavern.
+- First catches recover Keeper's Logs and the ruins blueprints; boss
+  materials are consumed when crafting material-gated rods.
+
+SHARED FISH
+- Online players on the same island see the same server-selected Mythic.
+- The first angler to hook it claims the fish. If it escapes, it returns;
+  after a catch, the island's shared Mythic respawns after a cooldown.
+- Boss hooks are also arbitrated by the server so only one angler can
+  claim an island boss fight at a time.
+- The Firstlight Koi is limited to three catches per server. Its remaining
+  supply is saved between server restarts.
+- All clients and the host server must use the same game build.
+
+CONTROLS
+- Z uses the equipped rod skill while the hook is underwater.
+- Use the Statue button in Atlantis or Red Hollow to follow the portal
+  quest and return between worlds.

@@ -1,0 +1,7 @@
+{
+  "_how_to": "Optional: set an invite code here before starting the server. Default port matches the game client.",
+  "port": 7777,
+  "invite": "",
+  "name": "Whisker Bay",
+  "motd": "Welcome to the bay! Be nice, fish hard."
+}

@@ -1,0 +1,442 @@
+=====================================================================
+  WHISKER BAY  -  Python edition, version 1.6.0
+  A cat, a boat, and a chain of islands full of fish that really
+  don't want to be caught. A real program, with online multiplayer that you
+  and your friends host yourselves.
+=====================================================================
+
+---------------------------------------------------------------------
+ NEW IN 1.5.2: POLISH PASS AND RELEASE CLEANUP
+---------------------------------------------------------------------
+
+ - More visible fish-bait management in the bag, with a clear prompt to
+   remove the saved Common fish bonus when you want a fresh bait setup.
+ - In-game patch notes and control guidance now better explain the new
+   bait and altar systems without changing the existing controls.
+ - Multiplayer version errors are now phrased generically so players are
+   told to match the same Whisker Bay build and server instead of a stale
+   historical version number.
+ - Save compatibility remains intact; earlier 1.5.0 and 1.5.1 saves still
+   load in this build.
+
+---------------------------------------------------------------------
+ NEW IN 1.5.0: RARITY REEL SCALING AND ROD SKILL SURGE
+---------------------------------------------------------------------
+
+ - Rarer fish now move more slowly during the reel fight, giving each
+   rarity a more distinct, deliberate fight:
+     Common ........ normal speed
+     Uncommon ...... 1.3x slower
+     Rare .......... 1.3x slower
+     Epic .......... 1.75x slower
+     Legendary ..... 2.5x slower
+     Mythic ........ 4x slower
+     Bosses ........ 5x slower (still have three stages)
+ - Island speed scaling has been softened to balance the new rarity
+   multipliers without removing the extra challenge of deeper waters.
+ - NEW ROD SKILL: SURGE (Z by default). While the hook is underwater,
+   Surge makes hook movement 40% faster and repels nearby Common,
+   Uncommon and Rare fish for 3 seconds. It has a 10-second cooldown.
+   Change its key in Settings > Controls.
+ - Multiplayer protocol updated. All players AND the host server must
+   use version 1.5.0; 1.4.4 clients and servers cannot mix with 1.5.0.
+
+---------------------------------------------------------------------
+ NEW IN 1.4.4: LOCH NESS AND THE ADMIN PANEL
+---------------------------------------------------------------------
+
+ - A new side island off the Deep Trench: LOCH NESS, a cold Highland
+   loch under grey skies, peat-black below 40 m, with a ruined castle
+   on the far shore and 16 freshwater fish: trout, Arctic charr, pike,
+   eels, the Salmon King, a Will-o'-the-Wisp and the Kelpie.
+   Finish the Volcanic Biome's island quest, reach level 18 and have
+   a Bathyscaphe to sail there (the same boat as the trench).
+ - A new boss: NESSIE. Call her with a Haggis Lure (Loch Ness shop).
+   She drops the only real Blurry Nessie Photo, which you need for
+   the Monster Hunter Rod. The loch also sells the Heather Rod, and
+   its quest "Ceilidh" gives the Tartan Rod.
+ - THE ADMIN PANEL (press F9). The host makes someone an admin by
+   typing  admin <their name>  in the server window (unadmin <name>
+   takes it away, admins lists them). Admins also get an "Admin"
+   button at the top of the screen. Pick a target (one player or
+   everyone) and:
+     Troll: jump scare, fake Mythic catch, fish rain, flip their screen,
+       disco party, HONK, summon a storm, scare their fish away, make
+       their fish slip, reverse their controls, fish zoomies, summon
+       their island's boss right at their hook, or put a giant banner
+       message on their screen.
+     Help: give coins, levels, boss lures or boss drops, give every
+       rod, unlock every island and boat, or pull them to your island.
+   Pranks only last a few seconds. Playing on your own, F9 works on
+   yourself so you can try everything.
+ - Hosts can also set "admin_code" in server_settings.json: anyone who
+   types  /admin <that code>  in chat becomes an admin.
+ - Everyone, the host's server included, needs 1.4.4 to play together.
+
+
+---------------------------------------------------------------------
+ NEW IN 1.4  (parts 1 to 3: Pallid Sea, Frostbite Shelf, Mariana Deep)
+---------------------------------------------------------------------
+
+ - A new island past the Deep Trench: the PALLID SEA, cold grey
+   whaling waters with 17 new fish (77 in total) and a whale skeleton
+   on the seabed. Finish the trench's island quest, reach level 20
+   and buy a Whaling Schooner to sail there.
+ - A new boss: THE PALLID WHALE, a white sperm whale still carrying
+   old harpoons. Call it with a Giant Squid Lure (Pallid Sea shop).
+   It drops Ambergris, which you need for the White Whale Rod.
+ - Past the Pallid Sea: the FROSTBITE SHELF, a polar sea under the
+   northern lights, with icebergs, snow and 17 more fish (94 in
+   total). Finish the Pallid Sea's island quest, reach level 26 and
+   buy an Icebreaker to sail there.
+ - A third boss: THE ANCIENT CRAB, crusted with frozen barnacles,
+   one claw bigger than your boat. Call it with a Crab Pot Lure. It
+   drops Ancient Carapace, for the Shellguard Rod.
+ - The last island of the chain: the MARIANA DEEP, eleven kilometres
+   straight down, with 19 more fish (113 in total) that get stranger
+   the deeper you go. Finish the Frostbite Shelf's island quest, reach
+   level 32 and buy a Hadal Sub to sail there. Its rods reach 4,000 m,
+   8,000 m and finally the very bottom.
+ - A fourth boss: THE BLOOP, something colossal and see-through from
+   the bottom of the sea. Call it with a Deep Siren Lure. It drops an
+   Echo Pearl, for the Echo Pearl Rod.
+ - 15 new rods with 9 new abilities: Barbed Hook, Riptide, Breach,
+   Frenzy, Mirror Bar, Permafrost, Carapace Guard, Siphon and Deep
+   Song. Two rods on each new island come from its quests.
+ - Every boss now drops its own trophy. Leviathan Scales you already
+   have carry over, and nothing else about your save changes.
+ - Coming in the next parts of 1.4: Red Hollow, caves,
+   limited-edition fish and sunken ruins with crafting.
+ - Everyone, the host's server included, needs 1.4 to play together.
+
+
+---------------------------------------------------------------------
+ NEW IN 1.3
+---------------------------------------------------------------------
+
+ - "Whisker Bay Wiki.html" is in this folder: open it in any web
+   browser for every fish, rod, ability, quest, pet and number in
+   the game.
+ - 23 new fish (60 in total), and fish really scale with rarity now:
+   Legendaries and Mythics are big. The first three islands top out
+   at Legendary (1, 2 and 3 Legendaries); Mythics live only in the
+   Deep Trench, with the Leviathan at the very bottom.
+ - Every fish lives around its own favourite depth. Each card in the
+   Fishpedia shows where.
+ - THE BAIT RACE: fish that notice your bait swim straight for it,
+   and the first one to touch it is hooked. No more nibbling back and
+   forth, no button to press in time. Steer the bait toward the fish
+   you want; rare fish are shy and only go for a bait that sits still.
+   Fish also swim 30% faster.
+ - Tougher fights, harder the further you sail, and a three-stage
+   Leviathan that even the best rods have to work for.
+ - ISLAND QUESTS: to sail to a new island the first time you need its
+   level, its boat AND the island quest of the island you are on.
+   Each island also has two rod quests whose rods are made for that
+   island. ALL QUESTS STARTED OVER in 1.3: you keep your level, coins,
+   fish and islands, but a quest rod from an island you haven't
+   reached yet waits for you there.
+ - PETS: from the Coral Reef on, the shop sells eggs (Eggs tab). Pets
+   ride in a little boat behind yours, grow while you play (levels 1
+   to 10) and help a little. Mittens the kitten even fishes for you.
+   Manage them in Bag > Pets.
+ - 3 new rods (Kelp, Maelstrom, Deepwatch) and 3 new, easy abilities:
+   Anchor, Whirlpool and Sonar Ping.
+ - XP is shown on the level bar, and every catch shows the XP it gave.
+ - Sonar Mk III: big fish glow along their outline, and a sonar screen
+   shows how far away they are, even out of sight.
+ - Everyone, the host's server included, needs 1.3 to play together.
+
+
+---------------------------------------------------------------------
+ NEW IN 1.2
+---------------------------------------------------------------------
+
+ - Every fish has brand-new art and a real swimming animation: the
+   body bends in a wave, fins row and ripple, gills breathe. Fish are
+   bigger in the water, and the Fishpedia pictures swim too.
+ - 10 new rods, each with a new ability:
+     Shop: Carbon Rod (Big Net), Obsidian Rod (Harpoon),
+           Glow Rod (Time Warp)
+     Quest rods (press J for Quests, then Claim):
+       Driftwood Rod ....... Catch 30 fish ............ Purrfect
+       Reef Warden's Rod ... Catch every reef fish .... Coral Shield
+       Cat's Whisker Rod ... 25 Perfect catches ....... Lure Magnet
+       Storm Rod ........... Catch 3 Electric fish .... Lightning
+       Midas Rod ........... Earn 250,000 coins ....... Golden Touch
+       Phoenix Rod ......... Catch a Phoenix Carp ..... Rebirth Flame
+       Starfall Rod ........ Catch 3 Mythic fish ...... Star Shower
+ - Old saves get credit for what they already did.
+
+
+---------------------------------------------------------------------
+ NEW IN 1.1
+---------------------------------------------------------------------
+
+ - All-new scenery: clouds and birds, sun glitter and dancing light
+   under the water, light rays, rock and coral walls, a rainbow over
+   the reef, a lava-lit volcano sea, and an aurora over the trench.
+ - Fish swim at a calm, natural speed now.
+ - The rarer the fish, the harder the fight: faster on the reel bar,
+   a narrower bar for you, and the catch bar drains quicker when it
+   slips out. The reel panel shows how hard each fish is.
+ - FISH TRICKS: many fish pull tricks while you reel them in: Dash,
+   Puff, Ink, Zap, Camouflage, Decoy, Split, Flash, Warp, Venom,
+   Scorch, Razor Scales, Regenerate, plus always-on ones like Heavy,
+   Slippery, Thrash and Rebirth. A warning bubble pops up just before
+   a trick goes off.
+ - ROD ABILITIES: every rod has one. Keep the fish inside your bar to
+   charge it, then press Q or right-click:
+     Starter Rod ..... Tug           +10% catch progress
+     Bamboo Rod ...... Quick Reel    progress fills 2x faster for 4 s
+     Fiberglass Rod .. Freeze        the fish can't move for 3 s
+     Coral Rod ....... Slice         +30% progress (3% less for each
+                                     rarity above Common)
+     Magma Rod ....... Inferno       no line tension for 4 s, +50% speed
+     Abyssal Rod ..... Gravity Well  pulls the fish into your bar
+     Leviathan Rod ... Tidal Slash   Slice and Freeze at once
+ - New gear: the Ability Charm (abilities charge 35% faster).
+ - Updating from 1.0? See part 5. Your saves carry over.
+
+
+---------------------------------------------------------------------
+ 1. ONE-TIME SETUP  (every player does this once)
+---------------------------------------------------------------------
+
+ 1. Install Python 3.8 or newer. It's free:
+        https://www.python.org/downloads/
+    WINDOWS: on the first installer screen, TICK the box
+             "Add python.exe to PATH" before clicking Install.
+
+ 2. Unzip this folder somewhere easy to find, like your Desktop.
+    (Don't run it from inside the zip.)
+
+ That's it. The first time you start the game it downloads the one
+ thing it needs (pygame-ce, a free game library). That needs internet
+ once and takes about a minute.
+
+
+---------------------------------------------------------------------
+ 2. PLAY
+---------------------------------------------------------------------
+
+   Windows : double-click  "Play Whisker Bay.bat"
+   Mac     : double-click  "Play Whisker Bay.command"
+             (first time only: right-click it > Open > Open, because
+              Mac is careful with files from the internet)
+   Linux   : run  ./play.sh      (or:  python3 play.py)
+
+ WINDOWS SAYS "Smart App Control blocked..."?  Start it this way:
+   1. Open the Whisker Bay folder.
+   2. Click the address bar at the top of the window (where the
+      folder's path is), type  cmd  and press Enter.
+   3. In the black window, type   py play.py   and press Enter.
+
+ On the title screen pick "Play on this computer" for single player,
+ or "Play online with friends" (see part 3).
+
+ CONTROLS (change any of them in Settings > Controls)
+   Hold Space / mouse ..... charge a cast, let go to throw
+   A / D or arrows ........ sail the boat, then steer the sinking hook
+   S ...................... dive faster        W ... reel the hook up
+   Space while sinking .... hold the hook at this depth
+   R ...................... pull the line in
+   A fish takes the bait .. it's hooked by itself, get ready to reel
+   Reel bar ............... hold to push your bar right, let go to
+                            slide left; keep the fish inside it
+   Q or right-click ....... use your rod ability (when it says READY)
+   B bag (and pets)   E shop   M sea chart   F Fishpedia   J quests
+   Esc settings
+   F11 fullscreen (you can also just drag the window bigger)
+
+
+---------------------------------------------------------------------
+ 3. MULTIPLAYER
+---------------------------------------------------------------------
+
+ One person is the HOST. The host runs the server; then everyone,
+ including the host, plays through "Play online with friends".
+
+ THE HOST
+   Windows : double-click  "Start Server.bat"
+             (blocked by Smart App Control? Do the cmd trick from
+              part 2 and type   py server.py   instead)
+   Mac     : double-click  "Start Server.command"
+   Linux   : run  ./start_server.sh      (or:  python3 server.py)
+
+   - A window opens and shows addresses like   192.168.1.23:7777
+     Keep that window open while people play.
+   - Windows may ask whether Python may use the network.
+     Click "Allow" (private networks is enough).
+   - Want an invite code so strangers can't make accounts? Open
+     "server_settings.json" (made the first time the server runs)
+     with Notepad or TextEdit, put a code in "invite", save, and
+     restart the server. You can also change the server's name and
+     port there.
+   - Commands you can type in the server window:
+       list            who is online
+       say <message>   talk to everyone as the host
+       kick <name>     disconnect someone
+       admin <name>    make someone an admin (F9 in the game)
+       unadmin <name>  take it away again
+       admins          list the admins
+       stop            save everything and shut down
+
+ EVERYONE
+   1. Start the game > "Play online with friends".
+   2. Server address: the address the host's server window shows,
+      for example  192.168.1.23:7777
+      (the host can type  localhost:7777)
+   3. First time: pick a username and password > "Create account".
+      If the server has an invite code, type it in too.
+      After that: "Log in". Tick "Keep me logged in" to skip this.
+   4. A new account can start fresh, or bring along an angler you
+      already have on your computer.
+
+ WHAT YOU GET ONLINE
+   - See your friends' boats and cats on the same island, live.
+   - Crew bonus: fishing on the same island as friends gives
+     everyone +5% luck per friend (up to +15%).
+   - T to chat. Keys 1-5 send emotes above your cat.
+   - Key 5 is "GO GO GO!": if a friend on your island is fighting
+     the Leviathan, your cheer makes their reel 25% faster.
+   - Everyone hears about big catches (Epic and better, and rare
+     mutations). When someone hooks the Leviathan, the whole server
+     is told, and anyone on that island sees the storm roll in.
+   - Tab: who's online, plus leaderboards (richest, highest level,
+     best catch, Fishpedia, Leviathans slain, most fish).
+   - Your progress is saved on the host's server (in its
+     "server_data" folder), with a backup on your own computer.
+     If the connection drops, keep fishing: it reconnects by itself
+     and uploads your progress.
+
+
+---------------------------------------------------------------------
+ 4. PLAYING WITH FRIENDS IN OTHER HOUSES
+---------------------------------------------------------------------
+
+ Same Wi-Fi works straight away. For friends somewhere else, pick ONE:
+
+ A) PINGGY (nothing to install, ready in a minute, free)
+    1. Start the server (part 3) and leave its window open.
+    2. Open a second window: click the Whisker Bay folder's address
+       bar, type  cmd  and press Enter.
+    3. Type this and press Enter (7777 is the server's port; use
+       yours if you changed it in server_settings.json):
+           ssh -p 443 -R0:127.0.0.1:7777 tcp@a.pinggy.io
+    4. The first time it asks "Are you sure you want to continue
+       connecting?": type  yes  and press Enter.
+       If it asks for a password: just press Enter, straight away.
+       (If you wait too long it closes. Then run step 3 again.)
+    5. It shows an address like
+           tcp://rnxyz-12-34-56-78.a.free.pinggy.link:41234
+       Friends type everything after  tcp://  into the Server
+       address box. You (the host) can keep using localhost:7777.
+    6. Keep both windows open. The free tunnel stops after 60
+       minutes, and the address changes every time you start it
+       again: just repeat step 3 and send friends the new one.
+    Use 127.0.0.1 in step 3, not "localhost".
+
+ B) TAILSCALE (one install, then the address never changes; free)
+    1. Everyone installs Tailscale and signs in:
+           https://tailscale.com/download
+    2. The host invites the friends to their Tailscale network
+       (in the Tailscale admin page: Users > Invite), or shares the
+       host computer with them.
+    3. Friends type the host computer's Tailscale address, which
+       starts with 100. , plus :7777   for example  100.101.102.103:7777
+
+ C) PORT FORWARDING (no extra apps, but you change router settings)
+    1. In the host's router settings, forward TCP port 7777 to the
+       host's computer (ask a parent if it's not your router).
+    2. Friends use the host's public IP address (search "what is my
+       IP" on the host's computer) plus :7777
+    3. Set an invite code (part 3) so only friends can make accounts.
+
+ D) AN ALWAYS-ON COMPUTER
+    server.py runs on any computer with Python 3.8+: an old laptop,
+    a Raspberry Pi, or a rented cloud server. It only needs incoming
+    TCP port 7777 open. Then nobody's gaming PC has to stay on.
+
+
+---------------------------------------------------------------------
+ 5. UPDATING TO A NEW VERSION  (your progress stays)
+---------------------------------------------------------------------
+
+ 1. Close the game (and the server, if you're the host).
+ 2. Unzip the new version.
+ 3. Copy everything from the new folder INTO your old Whisker Bay
+    folder, and choose "Replace the files" when Windows asks.
+    The zip never contains your progress, so nothing is lost:
+      saves                  your single-player anglers and settings
+      server_data            (host) everyone's online accounts
+      server_settings.json   (host) port, invite code, server name
+ 4. Start the game as usual.
+
+ Everyone must update, and the host must start the NEW server.py:
+ a 1.3 game can't join a 1.4 server (it shows a message saying so).
+ Updating keeps your level, coins, fish, quests and islands.
+
+
+---------------------------------------------------------------------
+ 6. GOOD TO KNOW
+---------------------------------------------------------------------
+
+ - Single-player saves are in the "saves" folder. Online accounts
+   live on the host's computer in "server_data". To back up, copy
+   those folders somewhere safe.
+ - Settings > Saves can also copy a "save code" you can paste into
+   Whisker Bay on another computer. Codes from the browser version
+   work too.
+ - Passwords are stored scrambled (hashed) on the server, but they
+   travel over the network without encryption. Use a password you
+   don't use anywhere else.
+ - The server trusts the game it talks to, so it's made for
+   friends, not strangers. Use an invite code if the server is
+   reachable from the internet.
+ - The Fishpedia (F) shows how hard each fish is to reel in, and
+   the tricks of every fish you've caught.
+
+
+---------------------------------------------------------------------
+ 7. IF SOMETHING GOES WRONG
+---------------------------------------------------------------------
+
+ "python is not recognized" or nothing happens (Windows)
+     Reinstall Python and tick "Add python.exe to PATH". Or use the
+     cmd trick from part 2 with  py play.py
+
+ "Smart App Control blocked an app that may be unsafe" (Windows)
+     Use the cmd trick from part 2:  py play.py  (or  py server.py)
+
+ Mac says the file can't be opened
+     Right-click it > Open. Or open Terminal, drag this folder in
+     after typing  cd  and a space, press Enter, then type
+     python3 play.py
+
+ "Could not reach the server"
+     Is the host's server window open? Is the address exactly what
+     it shows, including the : and the number after it? Same Wi-Fi
+     (or Tailscale on, or the Pinggy window still open)? Did the
+     host click "Allow" on the firewall question?
+
+ "The server closed the connection" (with Pinggy)
+     The host's ssh command must say  127.0.0.1  (part 4, step 3).
+     Close the Pinggy window, run it again, and send the new address.
+
+ "Connection closed by ... port 443" (with Pinggy)
+     The password question timed out. Run the ssh command again and
+     press Enter straight away when it asks for a password.
+
+ It installed pygame but won't start (Linux)
+     The launcher sets up a private ".venv" folder by itself. If even
+     that fails, run:  sudo apt install python3-venv python3-pip
+
+ The game crashed
+     The window shows what went wrong. Progress up to the last
+     autosave (every 10 seconds) is safe.
+
+ Game too small or too big
+     Drag the window edges, or press F11 for fullscreen.
+
+ Have fun out there. Watch the deep water.

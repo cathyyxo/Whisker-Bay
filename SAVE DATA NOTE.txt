@@ -1,0 +1,5 @@
+SAVE DATA / ACCOUNT NOTE
+
+Your original Whisker Bay 1.4.4 folder is not changed. This 1.5.0 package keeps the local online-backup profile files, but omits server_data/players because those files contain account password hashes and active login tokens. It also clears the remembered remote-login token and server invite code from the packaged settings.
+
+If you host your own server and need to keep existing multiplayer accounts, keep your original folder private and copy its server_data/players folder into this 1.5.0 folder on your own computer after extracting. Do not send that folder to other people.

@@ -1,0 +1,44 @@
+WHISKER BAY 1.6.0 - FRIENDS EDITION
+
+This ZIP is a clean, portable copy of the complete 1.6.0 game and multiplayer
+server. It does not include anyone's existing saves or server accounts. The
+game creates fresh data the first time it runs.
+
+WINDOWS
+1. Extract the whole ZIP to a normal folder (do not run it from inside the ZIP).
+2. Install Python 3.8 or newer if it is not already installed:
+   https://www.python.org/downloads/
+   On Windows, enable "Add python.exe to PATH" during setup.
+3. Double-click "Play Whisker Bay.bat". The first launch installs pygame-ce
+   and needs an internet connection. The launcher also checks GitHub Releases
+   for game updates; internet is needed to download an update.
+
+PLAY WITH FRIENDS
+1. One person hosts: double-click "Start Server.bat" and allow it through the
+   computer's firewall if asked. This clean package uses port 7777.
+2. The host starts the game and connects to localhost:7777.
+3. Friends connect to the host computer's address followed by :7777. On the
+   same Wi-Fi, use the host's local network address. For friends elsewhere,
+   use a trusted private network such as Tailscale, or configure the router to
+   forward TCP port 7777 and share the host's public address.
+4. Keep the server window open while playing. Every player must use the same
+   game version as the host. The server launcher checks GitHub Releases for
+   updates before starting. The host's server_data folder stores online
+   accounts and shared limited-fish inventory after the server first runs.
+
+You can optionally add an invite code by editing "server_settings.json" before
+starting the server. Give the code only to the people you want to join.
+
+The "saves" and "server_data" folders are intentionally omitted from this ZIP:
+they are created as needed, so this package works on a computer with no prior
+Whisker Bay data. Keep a separate backup if you later want to preserve progress.
+
+See "READ ME FIRST.txt" for more detailed multiplayer and troubleshooting
+instructions, and "WHATS NEW 1.6.0.txt" for the update highlights.
+
+UPDATES
+The launcher checks the public cathyyxo/Whisker-Bay GitHub Releases page each
+time the game or server starts. When a newer stable release is available, it
+downloads and verifies the release ZIP before applying it. Saves, server
+accounts, and the host's server_settings.json are preserved. Keep using the
+launcher from this folder to receive future updates.

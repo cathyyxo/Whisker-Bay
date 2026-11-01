@@ -1,0 +1,65 @@
+name: Build and publish release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Validate release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import ast
+          import os
+          import re
+
+          with open('whiskerbay/__init__.py', encoding='utf-8') as source:
+              tree = ast.parse(source.read())
+          version = next(
+              node.value.value
+              for node in tree.body
+              if isinstance(node, ast.Assign)
+              and any(
+                  isinstance(target, ast.Name) and target.id == '__version__'
+                  for target in node.targets
+              )
+              and isinstance(node.value, ast.Constant)
+              and isinstance(node.value.value, str)
+          )
+          tag = os.environ['RELEASE_TAG']
+          if not re.fullmatch(r'v\d+\.\d+\.\d+', tag) or tag != f'v{version}':
+              raise SystemExit(
+                  f'Release tag {tag!r} must match the game version v{version}.'
+              )
+          PY
+
+      - name: Check Python syntax
+        run: python -m py_compile play.py updater.py build_release.py server.py whiskerbay/*.py
+
+      - name: Build clean release ZIP
+        run: python build_release.py --output dist/Whisker-Bay.zip
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/Whisker-Bay.zip \
+            --title "Whisker Bay ${RELEASE_TAG#v}" \
+            --generate-notes
