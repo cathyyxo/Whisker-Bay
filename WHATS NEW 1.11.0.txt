@@ -1,0 +1,17 @@
+WHISKER BAY 1.11.0 - FISH & BOSS ENCOUNTER UPDATE
+
+FISHING & POPULATIONS
+- Fish are less likely to ignore bait during ordinary hook descents.
+- Shared fish populations are less crowded and gather into small schools
+  spread across the water instead of lining up.
+- Sonar labels avoid overlapping, and fish render in a clearer depth order.
+- Improved distinct artwork and signature details for several fish species.
+
+BOSSES
+- Admin boss summons now appear as shared encounters on the selected
+  player's island, with clear feedback for active bosses and cooldowns.
+- Boss phase transitions use each boss's own colors and encounter messages.
+
+MULTIPLAYER
+- The multiplayer protocol remains version 8; use compatible protocol-8
+  clients and servers.

@@ -1,2 +1,2 @@
 """Whisker Bay: a cat, a boat, and four islands of fish that really don't want to be caught."""
-__version__ = '1.10.0'
+__version__ = '1.11.0'
